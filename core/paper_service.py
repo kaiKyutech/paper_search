@@ -2,7 +2,7 @@
 # core/paper_service.py
 
 from core.data_models import PaperResult, PaperInfo
-from api.semantic_scholar_api import search_papers_semantic
+from api.paper_api import search_papers_semantic
 from typing import Tuple
 
 def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
