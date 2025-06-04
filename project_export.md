@@ -780,7 +780,7 @@ def build_cy_elements_simple(papers: list) -> list:
             "title": "論文タイトル",
             "abstract": "論文概要",
             "url": "論文のURL",
-            "paperId": "一意のID"
+            "paper_id": "一意のID"
          }
     """
     elements = []
@@ -798,7 +798,7 @@ def build_cy_elements_simple(papers: list) -> list:
     angle_step = 2 * math.pi / num_papers if num_papers > 0 else 0
 
     for i, paper in enumerate(papers.papers,start=1):
-        # 論文データから必要な情報を取得（paperIdがなければインデックスを利用）
+        # 論文データから必要な情報を取得（paper_idがなければインデックスを利用）
         paper_id = paper.paper_id
         node_id = f"paper_{paper_id}"
         angle = i * angle_step
@@ -808,7 +808,7 @@ def build_cy_elements_simple(papers: list) -> list:
         node = {
             "data": {
                 "id": node_id,
-                "paperId": paper_id,
+                "paper_id": paper_id,
                 "label": paper.title,
                 "title": paper.title,
                 "abstract": paper.abstract,
@@ -846,7 +846,7 @@ papers = [
                      "the DeSepTr architecture can overcome limitations related to the heterogeneity of individuals’ behavior patterns "
                      "and the weak inductive bias of transformer algorithms."),
         "url": "https://www.semanticscholar.org/paper/4394e581e2fa1685072ebe9e27a026f8f6191c24",
-        "paperId": "4394e581e2fa1685072ebe9e27a026f8f6191c24"
+        "paper_id": "4394e581e2fa1685072ebe9e27a026f8f6191c24"
     }
 ]
 
@@ -980,7 +980,7 @@ def semantic_controller(query: str, year_range: tuple, limit: int = 10):
             title=d["title"],
             abstract=d.get("abstract"),
             url=d["url"],
-            paperId=d["paperId"]
+            paper_id=d["paper_id"]
         )
         papers.paper.append(paper)
     return papers
@@ -1121,7 +1121,7 @@ def render_network_sections(papers, details=False):
         )
     # ノード情報の高速検索用辞書（センター以外）
     element_dict = {str(f"{e['data']['id']}"): e for e in elements if e["data"]["id"] != "center"}
-    # 論文情報を paper_id でマッピング（ここでは PaperFields の paperId と対応付け）
+    # 論文情報を paper_id でマッピング（ここでは PaperFields の paper_id と対応付け）
     papers_dict = {str(f"paper_{p.paper_id}"): p for p in papers.papers}
     
     return selected, element_dict, papers_dict
@@ -1144,7 +1144,7 @@ def get_selected_papers(selected, element_dict, papers_dict):
                 "title": node_papers.title,
                 "abstract": node_papers.abstract,
                 "url": node_papers.url,
-                "paperId": node_papers.paper_id,
+                "paper_id": node_papers.paper_id,
                 "relatedness": node_elem["data"]["relatedness"],
             #    "relatedness": getattr(paper, "relatedness", 0),  # 存在しない場合は0とする例
             #    "university": getattr(paper, "university", "不明"),
@@ -1406,7 +1406,7 @@ def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 
             title=paper["title"],
             abstract=paper.get("abstract"),
             url=paper["url"],
-            paper_id=paper["paperId"]
+            paper_id=paper["paper_id"]
         )
         for paper in raw_papers
     ]

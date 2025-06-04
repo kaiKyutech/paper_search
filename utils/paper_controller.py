@@ -13,7 +13,7 @@ def semantic_controller(query: str, year_range: tuple, limit: int = 10):
             title=d["title"],
             abstract=d.get("abstract"),
             url=d["url"],
-            paperId=d["paperId"]
+            paper_id=d["paper_id"]
         )
         papers.paper.append(paper)
     return papers

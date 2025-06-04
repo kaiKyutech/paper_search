@@ -10,7 +10,7 @@ def build_cy_elements_simple(papers: list) -> list:
             "title": "論文タイトル",
             "abstract": "論文概要",
             "url": "論文のURL",
-            "paperId": "一意のID"
+            "paper_id": "一意のID"
          }
     """
     elements = []
@@ -28,7 +28,7 @@ def build_cy_elements_simple(papers: list) -> list:
     angle_step = 2 * math.pi / num_papers if num_papers > 0 else 0
 
     for i, paper in enumerate(papers.papers,start=1):
-        # 論文データから必要な情報を取得（paperIdがなければインデックスを利用）
+        # 論文データから必要な情報を取得（paper_idがなければインデックスを利用）
         paper_id = paper.paper_id
         node_id = f"paper_{paper_id}"
         angle = i * angle_step
@@ -38,7 +38,7 @@ def build_cy_elements_simple(papers: list) -> list:
         node = {
             "data": {
                 "id": node_id,
-                "paperId": paper_id,
+                "paper_id": paper_id,
                 "label": paper.title,
                 "title": paper.title,
                 "abstract": paper.abstract,
@@ -76,7 +76,7 @@ papers = [
                      "the DeSepTr architecture can overcome limitations related to the heterogeneity of individuals’ behavior patterns "
                      "and the weak inductive bias of transformer algorithms."),
         "url": "https://www.semanticscholar.org/paper/4394e581e2fa1685072ebe9e27a026f8f6191c24",
-        "paperId": "4394e581e2fa1685072ebe9e27a026f8f6191c24"
+        "paper_id": "4394e581e2fa1685072ebe9e27a026f8f6191c24"
     }
 ]
 

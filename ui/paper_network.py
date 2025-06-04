@@ -50,7 +50,7 @@ def render_network_sections(papers, details=False):
         )
     # ノード情報の高速検索用辞書（センター以外）
     element_dict = {str(f"{e['data']['id']}"): e for e in elements if e["data"]["id"] != "center"}
-    # 論文情報を paper_id でマッピング（ここでは PaperFields の paperId と対応付け）
+    # 論文情報を paper_id でマッピング（ここでは PaperFields の paper_id と対応付け）
     papers_dict = {str(f"paper_{p.paper_id}"): p for p in papers.papers}
     
     return selected, element_dict, papers_dict
@@ -73,7 +73,7 @@ def get_selected_papers(selected, element_dict, papers_dict):
                 "title": node_papers.title,
                 "abstract": node_papers.abstract,
                 "url": node_papers.url,
-                "paperId": node_papers.paper_id,
+                "paper_id": node_papers.paper_id,
                 "relatedness": node_elem["data"]["relatedness"],
             #    "relatedness": getattr(paper, "relatedness", 0),  # 存在しない場合は0とする例
             #    "university": getattr(paper, "university", "不明"),
