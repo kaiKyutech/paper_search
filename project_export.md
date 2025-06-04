@@ -34,6 +34,7 @@ import streamlit as st
 from ui import search_bar, result_summary, paper_network, chat_panel
 from state.state_manager import initialize_session_state
 from utils import config
+from core import llm_service
 
 st.set_page_config(layout="wide")
 
@@ -83,7 +84,6 @@ def main():
                 unsafe_allow_html=True
             )
             if st.session_state["papers"].papers and st.button("解析開始",key="init_2"):
-                
                 pass
 
             if st.session_state["papers"].papers:
@@ -95,6 +95,7 @@ def main():
                         st.session_state["selected_paper"] = paper_network.get_selected_papers(selected, element_dict, papers_dict)
                         #print(st.session_state["selected_paper"])
                         st.rerun()
+            
         
         with chat_col:
             st.write("### 論文解説AI")
@@ -185,7 +186,7 @@ def initialize_session_state():
         "selected_paper": [],
         "prev_selected_nodes": [],
         "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True
+        "initial_prompt_processed": True,
     }
 
     for key, value in defaults.items():
@@ -1406,7 +1407,7 @@ def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 
             title=paper["title"],
             abstract=paper.get("abstract"),
             url=paper["url"],
-            paper_id=paper["paper_id"]
+            paper_id=paper["paperId"]
         )
         for paper in raw_papers
     ]

@@ -16,7 +16,7 @@ def initialize_session_state():
         "selected_paper": [],
         "prev_selected_nodes": [],
         "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True
+        "initial_prompt_processed": True,
     }
 
     for key, value in defaults.items():
