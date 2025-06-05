@@ -125,67 +125,70 @@ def main():
             '<span style="color:coral; font-weight:bold;">＊他のUIの操作は文章生成が完了してから行ってください。（生成中に触ってしまうと途中で止まってしまいます。）</span>',
             unsafe_allow_html=True,
         )
-        if st.button("選択された論文の解説 or チャット履歴削除", key="init"):
-            st.session_state["chat_history"] = [
-                {"role": "system", "content": config.system_prompt}
-            ]
-            st.session_state["initial_prompt_processed"] = False
 
-        # テキストチャットなどの処理をここに記述
-        chat_container = st.container(height=600)
-        history_placeholder = chat_container.empty()
-        stream_placeholder = chat_container.empty()
+        spacer_l, chat_col, spacer_r = st.columns([1, 2, 1])
+        with chat_col:
+            if st.button("選択された論文の解説 or チャット履歴削除", key="init"):
+                st.session_state["chat_history"] = [
+                    {"role": "system", "content": config.system_prompt}
+                ]
+                st.session_state["initial_prompt_processed"] = False
 
-        history_placeholder.markdown(
-            f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
-            unsafe_allow_html=True,
-        )
+            # テキストチャットなどの処理をここに記述
+            chat_container = st.container(height=600)
+            history_placeholder = chat_container.empty()
+            stream_placeholder = chat_container.empty()
 
-        # 初期入力
-        if (
-            not st.session_state["initial_prompt_processed"]
-            and "selected_paper" in st.session_state
-        ):
-            chat_panel.render_stream(
-                stream_placeholder, selected_paper=st.session_state["selected_paper"][0]
-            )
-            st.session_state["initial_prompt_processed"] = True
             history_placeholder.markdown(
                 f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
                 unsafe_allow_html=True,
             )
-        st.caption(
-            '<span style="color:coral">＊自動スクロール機能はありません。メッセージ送信後は下にスクロールしてください。</span>',
-            unsafe_allow_html=True,
-        )
 
-        with st.form(key="chat_form"):
-            user_message = st.text_area("あなたのメッセージ", key="chat_input")
-            submitted = st.form_submit_button("送信")
-
-        if submitted and user_message.strip():
-            st.session_state["chat_history"].append(
-                {"role": "user", "content": user_message}
-            )
-            history_placeholder.markdown(
-                f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
+            # 初期入力
+            if (
+                not st.session_state["initial_prompt_processed"]
+                and "selected_paper" in st.session_state
+            ):
+                chat_panel.render_stream(
+                    stream_placeholder, selected_paper=st.session_state["selected_paper"][0]
+                )
+                st.session_state["initial_prompt_processed"] = True
+                history_placeholder.markdown(
+                    f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
+                    unsafe_allow_html=True,
+                )
+            st.caption(
+                '<span style="color:coral">＊自動スクロール機能はありません。メッセージ送信後は下にスクロールしてください。</span>',
                 unsafe_allow_html=True,
             )
-            api_messages = [
-                {
-                    "role": "user" if msg["role"] == "hidden_user" else msg["role"],
-                    "content": msg["content"],
-                }
-                for msg in st.session_state["chat_history"]
-            ]
-            chat_panel.update_chat_history_with_response(
-                api_messages, stream_placeholder
-            )
-            history_placeholder.markdown(
-                f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
-                unsafe_allow_html=True,
-            )
-        st.markdown("</div>", unsafe_allow_html=True)
+
+            with st.form(key="chat_form"):
+                user_message = st.text_area("あなたのメッセージ", key="chat_input")
+                submitted = st.form_submit_button("送信")
+
+            if submitted and user_message.strip():
+                st.session_state["chat_history"].append(
+                    {"role": "user", "content": user_message}
+                )
+                history_placeholder.markdown(
+                    f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
+                    unsafe_allow_html=True,
+                )
+                api_messages = [
+                    {
+                        "role": "user" if msg["role"] == "hidden_user" else msg["role"],
+                        "content": msg["content"],
+                    }
+                    for msg in st.session_state["chat_history"]
+                ]
+                chat_panel.update_chat_history_with_response(
+                    api_messages, stream_placeholder
+                )
+                history_placeholder.markdown(
+                    f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
+                    unsafe_allow_html=True,
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
