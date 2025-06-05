@@ -2,6 +2,11 @@ import math
 from collections import defaultdict
 from . import field_colors
 
+
+def _short_label(title: str, length: int = 20) -> str:
+    """Return a shortened title for display."""
+    return title if len(title) <= length else title[: length - 1] + "…"
+
 def build_cy_elements_simple(papers: list) -> list:
     """
     Cytoscape用のノード・エッジ情報を生成するシンプルな実装。
@@ -26,7 +31,7 @@ def build_cy_elements_simple(papers: list) -> list:
     
     num_papers = len(papers.papers)
     # 論文ノードを中心の周りに円形に配置
-    radius = 100  # 中心からの距離（必要に応じて調整）
+    radius = 200  # 中心からの距離を広めに取る
     angle_step = 2 * math.pi / num_papers if num_papers > 0 else 0
 
     for i, paper in enumerate(papers.papers,start=1):
@@ -34,14 +39,14 @@ def build_cy_elements_simple(papers: list) -> list:
         paper_id = paper.paper_id
         node_id = f"paper_{paper_id}"
         angle = i * angle_step
-        x = (radius+i*10) * math.cos(angle)
-        y = (radius+i*10) * math.sin(angle)
+        x = (radius + i * 15) * math.cos(angle)
+        y = (radius + i * 15) * math.sin(angle)
         
         node = {
             "data": {
                 "id": node_id,
                 "paper_id": paper_id,
-                "label": paper.title,
+                "label": _short_label(paper.title),
                 "title": paper.title,
                 "abstract": paper.abstract,
                 "url": paper.url,
@@ -91,7 +96,7 @@ def build_cy_elements_by_field(papers, analysis_map):
         field_groups[first][second].append(paper)
 
     num_fields = len(field_groups)
-    radius = 150
+    radius = 300
     angle_step = 2 * math.pi / num_fields if num_fields else 0
     for idx, (field, subdict) in enumerate(field_groups.items()):
         angle = idx * angle_step
@@ -110,7 +115,7 @@ def build_cy_elements_by_field(papers, analysis_map):
         elements.append(field_node)
         elements.append({"data": {"id": f"edge_center_{field_id}", "source": "center", "target": field_id}})
 
-        sub_radius = 80
+        sub_radius = 150
         num_sub = len(subdict)
         sub_angle = 2 * math.pi / num_sub if num_sub else 0
         for sidx, (subfield, plist) in enumerate(subdict.items()):
@@ -130,17 +135,17 @@ def build_cy_elements_by_field(papers, analysis_map):
             elements.append(sub_node)
             elements.append({"data": {"id": f"edge_{field_id}_{sub_id}", "source": field_id, "target": sub_id}})
 
-            paper_radius = 50
+            paper_radius = 80
             paper_angle = 2 * math.pi / len(plist) if plist else 0
             for j, paper in enumerate(plist):
-                px = sfx + (paper_radius + j * 10) * math.cos(j * paper_angle)
-                py = sfy + (paper_radius + j * 10) * math.sin(j * paper_angle)
+                px = sfx + (paper_radius + j * 15) * math.cos(j * paper_angle)
+                py = sfy + (paper_radius + j * 15) * math.sin(j * paper_angle)
                 node_id = f"paper_{paper.paper_id}"
                 node = {
                     "data": {
                         "id": node_id,
                         "paper_id": paper.paper_id,
-                        "label": paper.title,
+                        "label": _short_label(paper.title),
                         "title": paper.title,
                         "abstract": paper.abstract,
                         "url": paper.url,

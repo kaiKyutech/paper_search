@@ -24,11 +24,11 @@ def render_network_sections(papers, details=False):
             "selector": "node",
             "style": {
                 "label": "data(label)",
-                "font-size": "12px",
+                "font-size": "10px",
                 "color": "#333",
                 "background-color": "data(color)",
-                "width": "30px",
-                "height": "30px",
+                "width": "35px",
+                "height": "35px",
             },
         },
         {
@@ -51,15 +51,15 @@ def render_network_sections(papers, details=False):
         },
         {
             "selector": "[type='field']",
-            "style": {"shape": "rectangle", "width": "40px", "height": "40px"},
+            "style": {"shape": "rectangle", "width": "50px", "height": "50px"},
         },
         {
             "selector": "[type='subfield']",
-            "style": {"shape": "round-rectangle", "width": "35px", "height": "35px"},
+            "style": {"shape": "round-rectangle", "width": "45px", "height": "45px"},
         },
         {
             "selector": "[type='paper']",
-            "style": {"shape": "ellipse"},
+            "style": {"shape": "ellipse", "width": "35px", "height": "35px"},
         },
     ]
     layout = {"name": "preset"}
@@ -68,7 +68,7 @@ def render_network_sections(papers, details=False):
         selected = cytoscape(
             elements,
             style_sheet,
-            height="700px",
+            height="800px",
             layout=layout,
             key="graph",
             selection_type="single",
