@@ -177,7 +177,7 @@ def stream_chat_response(model_name: str, messages: list, temperature: float = 0
 
 if __name__ == "__main__":
     # 非ストリーミング生成の例
-    model = "gemma3:12b"
+    model = config.OLLAMA_MODEL
     prompt = "自己紹介をお願いします"
     try:
         structured_response = get_structured_response(model, prompt)

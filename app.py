@@ -34,7 +34,7 @@ def main():
                 unsafe_allow_html=True,
             )
             if st.session_state["papers"].papers and st.button(
-                "解析開始", key="init_2"
+                "一括解析", key="batch_analysis"
             ):
                 # 取得済みの PaperResult から、すべての論文を解析してキャッシュに保存
                 for paper in st.session_state["papers"].papers:
@@ -59,24 +59,11 @@ def main():
                 if selected and "nodes" in selected and selected["nodes"]:
                     if selected["nodes"] != st.session_state["prev_selected_nodes"]:
                         st.session_state["prev_selected_nodes"] = selected["nodes"]
-                        st.session_state["selected_paper"] = (
+                        state_manager.update_selected_paper(
                             paper_network.get_selected_papers(
                                 selected, element_dict, papers_dict
                             )
                         )
-
-                        # 選択された論文の解析。session_state["paper_analysis"]に保存
-                        title = st.session_state["selected_paper"][0]["title"]
-                        abstract = st.session_state["selected_paper"][0]["abstract"]
-                        paper_id = st.session_state["selected_paper"][0]["paper_id"]
-                        key = f"paper_analysis_{paper_id}"
-
-                        if key not in st.session_state:
-                            # analyze_searched_paper は (タイトル, アブストラクト) をカンマ区切りで渡す想定
-                            analysis = llm_service.analyze_searched_paper(
-                                f"title: {title}, abstract: {abstract}"
-                            )
-                            st.session_state[key] = analysis
 
                         st.rerun()
 
@@ -87,7 +74,15 @@ def main():
             if selected_list:
                 paper_id = selected_list[0]["paper_id"]
                 cache_key = f"paper_analysis_{paper_id}"
-                if cache_key in st.session_state:
+                if st.button("選択論文を解析", key="analyze_selected"):
+                    title = selected_list[0]["title"]
+                    abstract = selected_list[0]["abstract"]
+                    analysis = llm_service.analyze_searched_paper(
+                        f"title: {title}, abstract: {abstract}"
+                    )
+                    st.session_state[cache_key] = analysis
+                    analysis_result = analysis
+                elif cache_key in st.session_state:
                     analysis_result = st.session_state[cache_key]
             elif st.session_state.get("user_input_analysis"):
                 analysis_result = st.session_state["user_input_analysis"]
@@ -147,7 +142,7 @@ def main():
             # 初期入力
             if (
                 not st.session_state["initial_prompt_processed"]
-                and "selected_paper" in st.session_state
+                and st.session_state.get("selected_paper")
             ):
                 chat_panel.render_stream(
                     stream_placeholder, selected_paper=st.session_state["selected_paper"][0]

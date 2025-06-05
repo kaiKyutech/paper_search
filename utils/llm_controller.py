@@ -60,7 +60,7 @@ def search_paper_lmstudio_controllar(input: str):
 def user_paper_ollama_controllar(input: str):
     #client = OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
     #MODEL = "gemma3:12b"
-    MODEL = "gemma-textonly_v3:latest"
+    MODEL = config.OLLAMA_MODEL
     #messages = [{
     #    "role": "user",
     #    "content": config.experiment_message_without_paper + input
