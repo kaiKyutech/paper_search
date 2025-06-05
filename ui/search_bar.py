@@ -54,20 +54,26 @@ def render_search_info_selection_section():
         search_num_col, year_col, search_engine_col = st.columns([1, 1, 1])
 
         with search_num_col:
-            num_search_papers = st.slider(
-                "検索する論文数", 1, 50, st.session_state["num_search_papers"]
+            st.slider(
+                "検索する論文数",
+                1,
+                50,
+                st.session_state["num_search_papers"],
+                key="num_search_papers",
             )
         with year_col:
-            year_range = st.slider(
-                "発行年の範囲", 1970, 2025, st.session_state["year_range"]
+            st.slider(
+                "発行年の範囲",
+                1970,
+                2025,
+                st.session_state["year_range"],
+                key="year_range",
             )
         with search_engine_col:
-            search_engine = st.radio(
+            st.radio(
                 "検索エンジン選択:",
                 ("semantic scholar", "Google Scholar"),
                 horizontal=True,
-                key="search_engine"
+                key="search_engine",
             )
 
-        if st.button("オプション設定更新"):
-            state_manager.update_search_settings(num_search_papers, year_range, search_engine)

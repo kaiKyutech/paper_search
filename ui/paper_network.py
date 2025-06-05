@@ -1,20 +1,35 @@
 # ui/paper_network_and_basic_info.py
 import streamlit as st
 from utils import cytoscape_utils
+from utils import field_colors
 from st_cytoscape import cytoscape
 
 def render_network_sections(papers, details=False):
-    elements = cytoscape_utils.build_cy_elements_simple(papers)
+    analysis_map = {}
+    all_analyzed = True
+    for paper in papers.papers:
+        key = f"paper_analysis_{paper.paper_id}"
+        analysis = st.session_state.get(key)
+        if analysis:
+            analysis_map[paper.paper_id] = analysis
+        else:
+            all_analyzed = False
+
+    if all_analyzed and analysis_map:
+        elements = cytoscape_utils.build_cy_elements_by_field(papers, analysis_map)
+    else:
+        elements = cytoscape_utils.build_cy_elements_simple(papers)
     style_sheet = [
         {
             "selector": "node",
             "style": {
                 "label": "data(label)",
-                "font-size": "12px",
+                "font-size": "10px",
                 "color": "#333",
-                "width": "30px",
-                "height": "30px",
-            }
+                "background-color": "data(color)",
+                "width": "35px",
+                "height": "35px",
+            },
         },
         {
             "selector": "edge",
@@ -34,6 +49,18 @@ def render_network_sections(papers, details=False):
                 "border-width": "2px",
             }
         },
+        {
+            "selector": "[type='field']",
+            "style": {"shape": "rectangle", "width": "50px", "height": "50px"},
+        },
+        {
+            "selector": "[type='subfield']",
+            "style": {"shape": "round-rectangle", "width": "45px", "height": "45px"},
+        },
+        {
+            "selector": "[type='paper']",
+            "style": {"shape": "ellipse", "width": "35px", "height": "35px"},
+        },
     ]
     layout = {"name": "preset"}
     
@@ -41,7 +68,7 @@ def render_network_sections(papers, details=False):
         selected = cytoscape(
             elements,
             style_sheet,
-            height="700px",
+            height="800px",
             layout=layout,
             key="graph",
             selection_type="single",

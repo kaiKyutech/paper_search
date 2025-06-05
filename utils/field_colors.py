@@ -1,12 +1,15 @@
 import plotly.express as px
 
 FIELD_LIST = [
-    "人工知能", "情報科学", "ロボティクス", "電子工学", "機械工学", "材料工学",
+    "transformer","人工知能", "ロボティクス", "電子工学", "機械工学", "材料工学",
     "化学", "物理学", "生物学", "医学", "薬学", "環境科学", "農学", "数学",
     "地球科学", "哲学", "心理学", "社会学", "教育学", "法学", "政治学",
     "経済学", "経営学", "言語学", "文学", "歴史学", "文化人類学", "メディア学",
     "芸術学", "土木工学", "交通工学", "建築工学",
 ]
+
+# Comma-separated string of field names for prompt templates
+FIELD_NAMES = ", ".join(FIELD_LIST)
 
 # large palette to support many fields
 _DEFAULT_COLORS = px.colors.qualitative.Dark24 + px.colors.qualitative.Light24
