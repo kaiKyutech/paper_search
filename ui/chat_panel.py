@@ -25,7 +25,7 @@ def update_chat_history_with_response(api_messages, stream_placeholder):
     """
     LLM APIからのストリーミングレスポンスを処理し、チャット履歴を更新する。
     """
-    MODEL = "gemma3:12b"
+    MODEL = config.OLLAMA_MODEL
     assistant_response = ""
     #stream_placeholder = st.empty()  # ストリーミング更新用プレースホルダー
     for updated_text in ollama_api.stream_chat_response(model_name=MODEL,messages=api_messages):

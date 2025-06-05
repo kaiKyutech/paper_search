@@ -8,7 +8,7 @@ def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalys
     prompt = config.experiment_message_without_paper + input_text
     
     if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2("gemma-textonly_v3:latest", prompt)
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
     elif api_type == "lm_studio":
         client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
         messages = [{"role": "user", "content": prompt}]
@@ -30,7 +30,7 @@ def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAn
     prompt = config.experiment_message_without_paper + input_text
     
     if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2("gemma-textonly_v3:latest", prompt)
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
     elif api_type == "lm_studio":
         client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
         messages = [{"role": "user", "content": prompt}]

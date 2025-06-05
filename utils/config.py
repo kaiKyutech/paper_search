@@ -1,5 +1,9 @@
 # 実験用のmessage　ユーザー論文あり
+import os
 from .field_colors import FIELD_LIST, FIELD_NAMES
+
+# デフォルトで使用するOllamaモデル名を環境変数から指定可能にする
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
 
 _experiment_message_template = '''
 以下は論文の情報です。
