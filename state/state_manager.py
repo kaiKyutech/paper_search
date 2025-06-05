@@ -30,7 +30,7 @@ def reset_chat_history():
 
 def update_selected_paper(selected_paper):
     st.session_state["selected_paper"] = selected_paper
-    st.session_state["initial_prompt_processed"] = False
+    #st.session_state["initial_prompt_processed"] = False
 
 def update_paper_results(papers: PaperResult):
     st.session_state["papers"] = papers
