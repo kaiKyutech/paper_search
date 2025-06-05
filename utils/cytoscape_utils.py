@@ -134,28 +134,3 @@ def build_cy_elements_by_field(papers, analysis_map):
             elements.append({"data": {"id": f"edge_{field_id}_{node_id}", "source": field_id, "target": node_id}})
 
     return elements
-
-# テスト用のサンプルデータ（与えられた例）
-papers = [
-    {
-        "title": "A Data Efficient Vision Transformer for Robust Human Activity Recognition from the Spectrograms of Wearable Sensor Data",
-        "abstract": ("This study introduces the Data Efficient Separable Transformer (DeSepTr) architecture, "
-                     "a novel framework for Human Activity Recognition (HAR) that utilizes a light-weight computer vision model "
-                     "to train a Vision Transformer (ViT) on spectrograms generated from wearable sensor data. "
-                     "The proposed model achieves strong results on several HAR tasks, including surface condition recognition "
-                     "and activity recognition. Compared to the ResNet-18 model, DeSepTr outperforms by 5.9% on out-of-distribution "
-                     "test data accuracy for surface condition recognition. The framework enables ViTs to learn from limited labeled "
-                     "training data and generalize to data from participants outside of the training cohort, potentially leading to "
-                     "the development of activity recognition models that are robust to the wider population. The results suggest that "
-                     "the DeSepTr architecture can overcome limitations related to the heterogeneity of individuals’ behavior patterns "
-                     "and the weak inductive bias of transformer algorithms."),
-        "url": "https://www.semanticscholar.org/paper/4394e581e2fa1685072ebe9e27a026f8f6191c24",
-        "paper_id": "4394e581e2fa1685072ebe9e27a026f8f6191c24"
-    }
-]
-
-if __name__ == "__main__":
-    elements = build_cy_elements_simple(papers)
-    # 作成された要素を確認（デバッグ用）
-    from pprint import pprint
-    pprint(elements)
