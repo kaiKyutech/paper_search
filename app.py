@@ -1,7 +1,7 @@
 # app.py
 import streamlit as st
 from ui import search_bar, result_summary, paper_network, chat_panel
-from state.state_manager import initialize_session_state
+from state import state_manager
 from utils import config
 from core import llm_service
 
@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 
 def main():
     # セッション状態の初期化（すべてのキーは state_manager.py で一元管理）
-    initialize_session_state()
+    state_manager.initialize_session_state()
 
     st.title("論文検索＆可視化＆AI解説")
 
@@ -20,22 +20,52 @@ def main():
     # --- 2段目：結果のサマリー表示 ---
     with st.expander("詳細情報"):
         with st.container(height=500):
+            # ここで col1, col2, col3 を一度だけ定義し、その内部の表示ロジックをすべて上書き
             col1, col2, col3 = st.columns([1, 2, 2])
+
             with col1:
-                st.write("### 指定論文の分野配分")
-                if st.session_state["user_input_analysis"]:
-                    result_summary.render__paper_info_analysis(st.session_state["user_input_analysis"].fields)
-            
+                st.write("### 分野配分")
+                selected_list = st.session_state.get("selected_paper", [])
+                if selected_list:
+                    paper_id = selected_list[0]["paper_id"]
+                    cache_key = f"paper_analysis_{paper_id}"
+                    if cache_key in st.session_state:
+                        result_summary.render__paper_info_analysis(
+                            st.session_state[cache_key].fields
+                        )
+                    else:
+                        st.info("解析中です…（完了までお待ちください）")
+                elif st.session_state.get("user_input_analysis"):
+                    result_summary.render__paper_info_analysis(
+                        st.session_state["user_input_analysis"].fields
+                    )
+                else:
+                    st.info("ユーザー入力解析または論文ネットワークで論文を選択してください。")
+
             with col2:
                 st.write("### 解析結果")
-                st.caption('ユーザー論文 or 指定した論文の解析結果を出力します。', unsafe_allow_html=True)
-                if st.session_state["user_input_analysis"]:
-                    result_summary.render_paper_analysis_result(st.session_state["user_input_analysis"])
-            
+                st.caption(
+                    'ユーザー論文または選択論文の解析結果を表示します。', unsafe_allow_html=True
+                )
+                if selected_list:
+                    paper_id = selected_list[0]["paper_id"]
+                    cache_key = f"paper_analysis_{paper_id}"
+                    if cache_key in st.session_state:
+                        result_summary.render_paper_analysis_result(
+                            st.session_state[cache_key]
+                        )
+                    else:
+                        st.info("解析中です…（完了までお待ちください）")
+                elif st.session_state.get("user_input_analysis"):
+                    result_summary.render_paper_analysis_result(
+                        st.session_state["user_input_analysis"]
+                    )
+                else:
+                    st.info("まずは検索→論文選択、またはAI検索を実行してください。")
+
             with col3:
                 st.write("### 論文情報")
-                #if "selected_paper" in st.session_state:
-                result_summary.render_info_paper(st.session_state["selected_paper"])
+                result_summary.render_info_paper(st.session_state.get("selected_paper", []))
     
     # --- 3段目：論文ネットワーク＆テキストチャット ---
     with st.container():
@@ -53,7 +83,20 @@ def main():
                 unsafe_allow_html=True
             )
             if st.session_state["papers"].papers and st.button("解析開始",key="init_2"):
-                pass
+                # 取得済みの PaperResult から、すべての論文を解析してキャッシュに保存
+                for paper in st.session_state["papers"].papers:
+                    pid = paper.paper_id
+                    cache_key = f"paper_analysis_{pid}"
+                    # まだ解析していなければ LLM 呼び出し
+                    if cache_key not in st.session_state:
+                        title = paper.title
+                        abstract = paper.abstract or ""
+                        analysis = llm_service.analyze_searched_paper(
+                            f"title: {title}, abstract: {abstract}"
+                        )
+                        st.session_state[cache_key] = analysis
+                # 全件解析後にリラン
+                st.rerun()
 
             if st.session_state["papers"].papers:
                 selected, element_dict, papers_dict = paper_network.render_network_sections(st.session_state["papers"])
@@ -62,7 +105,18 @@ def main():
                     if selected["nodes"] != st.session_state["prev_selected_nodes"]:
                         st.session_state["prev_selected_nodes"] = selected["nodes"]
                         st.session_state["selected_paper"] = paper_network.get_selected_papers(selected, element_dict, papers_dict)
-                        #print(st.session_state["selected_paper"])
+                        
+                        # 選択された論文の解析。session_state["paper_analysis"]に保存
+                        title  = st.session_state["selected_paper"][0]["title"]
+                        abstract = st.session_state["selected_paper"][0]["abstract"]
+                        paper_id = st.session_state["selected_paper"][0]["paper_id"]
+                        key = f"paper_analysis_{paper_id}"
+                        
+                        if key not in st.session_state:
+                        # analyze_searched_paper は (タイトル, アブストラクト) をカンマ区切りで渡す想定
+                            analysis = llm_service.analyze_searched_paper(f"title: {title}, abstract: {abstract}")
+                            st.session_state[key] = analysis
+                        
                         st.rerun()
             
         

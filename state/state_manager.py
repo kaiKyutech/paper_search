@@ -10,6 +10,7 @@ def initialize_session_state():
         "first_user_input": "",
         "papers": PaperResult(),
         "user_input_analysis": None,
+        "paper_analysis": None,
         "num_search_papers": 10,
         "year_range": (2023, 2025),
         "search_engine": "semantic scholar",
@@ -35,7 +36,20 @@ def update_paper_results(papers: PaperResult):
     st.session_state["papers"] = papers
 
 def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
     st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
 
 def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
     st.session_state["num_search_papers"] = num_search_papers
