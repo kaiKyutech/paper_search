@@ -2,6 +2,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from utils.field_colors import get_field_color
 
 def render__paper_info_analysis(fields):
     if not fields:
@@ -16,12 +17,16 @@ def render__paper_info_analysis(fields):
     df = pd.DataFrame(data).copy().sort_values("percentage", ascending=False)
     sorted_names = df["name"].tolist()
 
+    color_map = {name: get_field_color(name) for name in df["name"]}
+
     fig = px.pie(
         df,
         names="name",
         values="percentage",
         title="各分野の割合（多い順・時計回り）",
-        category_orders={"name": sorted_names}
+        category_orders={"name": sorted_names},
+        color="name",
+        color_discrete_map=color_map,
     )
     fig.update_traces(direction="clockwise")
     st.plotly_chart(fig, use_container_width=True)
