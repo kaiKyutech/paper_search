@@ -79,7 +79,7 @@ def user_paper_ollama_controllar(input: str):
 
 def search_paper_ollama_controllar(input: str):
     #client = OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-    MODEL = config.OLLAMA_MODEL
+    MODEL = "gemma3:12b"
     messages = [{
         "role": "user",
         "content": config.llm_init_prompt_field_main_factor + input

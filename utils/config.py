@@ -4,7 +4,7 @@ from .field_colors import FIELD_LIST, FIELD_NAMES
 
 # デフォルトで使用するOllamaモデル名を環境変数から指定可能にする
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
-
+#OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-q8_0")
 _experiment_message_template = '''
 以下は論文の情報です。
 "論文のタイトル、論文のアブストラクト"
