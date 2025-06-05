@@ -19,7 +19,7 @@ def main():
 
     # --- 2段目：論文ネットワークと詳細情報 ---
     with st.container():
-        network_col, detail_col = st.columns([3, 2])
+        network_col, detail_col = st.columns([1, 1])
 
         with network_col:
             st.write("### 論文ネットワーク")
