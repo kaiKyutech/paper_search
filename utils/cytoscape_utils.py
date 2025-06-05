@@ -79,21 +79,21 @@ def build_cy_elements_by_field(papers, analysis_map):
     center_node = {"data": {"id": "center", "label": "your paper", "type": "center"}, "position": {"x": 0, "y": 0}}
     elements.append(center_node)
 
-    # Group papers by their main field (first in list)
-    field_groups = defaultdict(list)
+    # Group papers by first and second field
+    field_groups = defaultdict(lambda: defaultdict(list))
     for paper in papers.papers:
         analysis = analysis_map.get(paper.paper_id)
         if not analysis or not analysis.fields:
-            field_groups["Unknown"].append(paper)
+            field_groups["Unknown"]["Unknown"].append(paper)
             continue
-        main_field = analysis.fields[0].name
-        field_groups[main_field].append(paper)
+        first = analysis.fields[0].name
+        second = analysis.fields[1].name if len(analysis.fields) > 1 else "Other"
+        field_groups[first][second].append(paper)
 
     num_fields = len(field_groups)
     radius = 150
     angle_step = 2 * math.pi / num_fields if num_fields else 0
-
-    for idx, (field, plist) in enumerate(field_groups.items()):
+    for idx, (field, subdict) in enumerate(field_groups.items()):
         angle = idx * angle_step
         fx = radius * math.cos(angle)
         fy = radius * math.sin(angle)
@@ -110,27 +110,47 @@ def build_cy_elements_by_field(papers, analysis_map):
         elements.append(field_node)
         elements.append({"data": {"id": f"edge_center_{field_id}", "source": "center", "target": field_id}})
 
-        sub_radius = 70
-        sub_angle = 2 * math.pi / len(plist) if plist else 0
-        for j, paper in enumerate(plist):
-            px = fx + (sub_radius + j * 10) * math.cos(j * sub_angle)
-            py = fy + (sub_radius + j * 10) * math.sin(j * sub_angle)
-            node_id = f"paper_{paper.paper_id}"
-            node = {
+        sub_radius = 80
+        num_sub = len(subdict)
+        sub_angle = 2 * math.pi / num_sub if num_sub else 0
+        for sidx, (subfield, plist) in enumerate(subdict.items()):
+            s_angle = sidx * sub_angle
+            sfx = fx + sub_radius * math.cos(s_angle)
+            sfy = fy + sub_radius * math.sin(s_angle)
+            sub_id = f"{field_id}_{sidx}"
+            sub_node = {
                 "data": {
-                    "id": node_id,
-                    "paper_id": paper.paper_id,
-                    "label": paper.title,
-                    "title": paper.title,
-                    "abstract": paper.abstract,
-                    "url": paper.url,
-                    "color": field_colors.get_field_color(field),
-                    "type": "paper",
-                    "relatedness": j + 1,
+                    "id": sub_id,
+                    "label": subfield,
+                    "type": "subfield",
+                    "color": field_colors.get_field_color(subfield),
                 },
-                "position": {"x": px, "y": py},
+                "position": {"x": sfx, "y": sfy},
             }
-            elements.append(node)
-            elements.append({"data": {"id": f"edge_{field_id}_{node_id}", "source": field_id, "target": node_id}})
+            elements.append(sub_node)
+            elements.append({"data": {"id": f"edge_{field_id}_{sub_id}", "source": field_id, "target": sub_id}})
+
+            paper_radius = 50
+            paper_angle = 2 * math.pi / len(plist) if plist else 0
+            for j, paper in enumerate(plist):
+                px = sfx + (paper_radius + j * 10) * math.cos(j * paper_angle)
+                py = sfy + (paper_radius + j * 10) * math.sin(j * paper_angle)
+                node_id = f"paper_{paper.paper_id}"
+                node = {
+                    "data": {
+                        "id": node_id,
+                        "paper_id": paper.paper_id,
+                        "label": paper.title,
+                        "title": paper.title,
+                        "abstract": paper.abstract,
+                        "url": paper.url,
+                        "color": field_colors.get_field_color(subfield),
+                        "type": "paper",
+                        "relatedness": j + 1,
+                    },
+                    "position": {"x": px, "y": py},
+                }
+                elements.append(node)
+                elements.append({"data": {"id": f"edge_{sub_id}_{node_id}", "source": sub_id, "target": node_id}})
 
     return elements

@@ -54,6 +54,10 @@ def render_network_sections(papers, details=False):
             "style": {"shape": "rectangle", "width": "40px", "height": "40px"},
         },
         {
+            "selector": "[type='subfield']",
+            "style": {"shape": "round-rectangle", "width": "35px", "height": "35px"},
+        },
+        {
             "selector": "[type='paper']",
             "style": {"shape": "ellipse"},
         },
