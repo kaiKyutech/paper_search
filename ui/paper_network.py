@@ -1,10 +1,24 @@
 # ui/paper_network_and_basic_info.py
 import streamlit as st
 from utils import cytoscape_utils
+from utils import field_colors
 from st_cytoscape import cytoscape
 
 def render_network_sections(papers, details=False):
-    elements = cytoscape_utils.build_cy_elements_simple(papers)
+    analysis_map = {}
+    all_analyzed = True
+    for paper in papers.papers:
+        key = f"paper_analysis_{paper.paper_id}"
+        analysis = st.session_state.get(key)
+        if analysis:
+            analysis_map[paper.paper_id] = analysis
+        else:
+            all_analyzed = False
+
+    if all_analyzed and analysis_map:
+        elements = cytoscape_utils.build_cy_elements_by_field(papers, analysis_map)
+    else:
+        elements = cytoscape_utils.build_cy_elements_simple(papers)
     style_sheet = [
         {
             "selector": "node",
@@ -12,9 +26,10 @@ def render_network_sections(papers, details=False):
                 "label": "data(label)",
                 "font-size": "12px",
                 "color": "#333",
+                "background-color": "data(color)",
                 "width": "30px",
                 "height": "30px",
-            }
+            },
         },
         {
             "selector": "edge",
@@ -33,6 +48,14 @@ def render_network_sections(papers, details=False):
                 "border-color": "#F00",
                 "border-width": "2px",
             }
+        },
+        {
+            "selector": "[type='field']",
+            "style": {"shape": "rectangle", "width": "40px", "height": "40px"},
+        },
+        {
+            "selector": "[type='paper']",
+            "style": {"shape": "ellipse"},
         },
     ]
     layout = {"name": "preset"}
