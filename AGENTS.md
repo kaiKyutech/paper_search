@@ -30,6 +30,8 @@ paper_search/
     └── paper_controller.py
 ```
 
+新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+
 ## 開発規約
 - 使用言語は **Python** とする
 - コードスタイルは PEP8 を基準とする

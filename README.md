@@ -5,7 +5,12 @@
 ## 必要条件
 - Python 3.10 以上
 - [Ollama](https://github.com/ollama/ollama) がインストールされていること
-- 使用したいモデルを事前に `ollama pull` で取得しておくこと（例: `gemma:2b`, `mistral`, `llama2` など）
+- 使用したいモデルを事前に `ollama pull` で取得しておくこと。
+  特に以下の2モデルは必須です。
+  - `gemma3:12b(Q4_K_M ver)`
+  - `gemma3:12b(Q3_K_M ver)`
+  その他のモデルも `ollama pull モデル名` で追加取得できます。
+  QAT 版が公開されていればそちらを利用するのも良いでしょう。
 
 ## セットアップ
 1. 依存パッケージをインストールします。
@@ -13,6 +18,7 @@
    pip install -r requirements.txt
    ```
 2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。
+   未設定の場合は `gemma-textonly_v3:latest` が使用されます。
 3. 以下のコマンドでアプリを起動します。
    ```bash
    streamlit run app.py
