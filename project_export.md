@@ -1,7 +1,8 @@
 ## プロジェクト構成
 
 ```
-paper_search_v2/
+paper_search/
+├── AGENTS.md
 ├── api
 │   ├── lm_studio_api.py
 │   ├── ollama_api.py
@@ -11,6 +12,9 @@ paper_search_v2/
 │   ├── data_models.py
 │   ├── llm_service.py
 │   └── paper_service.py
+├── new_repo
+│   └── AGENTS.md
+├── requirements.txt
 ├── state
 │   ├── state_manager.py
 │   └── state_manager_back.py
@@ -22,8 +26,65 @@ paper_search_v2/
 └── utils
     ├── config.py
     ├── cytoscape_utils.py
+    ├── field_colors.py
     ├── llm_controller.py
     └── paper_controller.py
+```
+
+### File: AGENTS.md
+
+```markdown
+# AGENTS
+
+## プロジェクト構成
+
+```
+paper_search/
+├── api
+│   ├── lm_studio_api.py
+│   ├── ollama_api.py
+│   └── paper_api.py
+├── app.py
+├── core
+│   ├── data_models.py
+│   ├── llm_service.py
+│   └── paper_service.py
+├── new_repo
+│   ├── AGENTS.md
+│   └── README.md
+├── requirements.txt
+├── state
+│   ├── state_manager.py
+│   └── state_manager_back.py
+├── ui
+│   ├── chat_panel.py
+│   ├── paper_network.py
+│   ├── result_summary.py
+│   └── search_bar.py
+└── utils
+    ├── config.py
+    ├── cytoscape_utils.py
+    ├── field_colors.py
+    ├── llm_controller.py
+    └── paper_controller.py
+```
+
+新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+
+## 開発規約
+- 使用言語は **Python** とする
+- コードスタイルは PEP8 を基準とする
+  - インデントは4スペース
+  - 行長の目安は100文字
+  - クラス名は `PascalCase`
+  - 変数名・関数名は `snake_case`
+- コメントおよび docstring は日本語で記述する
+- Pull Request の本文も日本語で作成する
+
+## テスト
+- テストコードが存在する場合は `pytest` を実行すること
+- テストが無い場合は `pytest` 実行結果が `no tests ran` であっても問題ない
+
 ```
 
 ### File: app.py
@@ -32,15 +93,16 @@ paper_search_v2/
 # app.py
 import streamlit as st
 from ui import search_bar, result_summary, paper_network, chat_panel
-from state.state_manager import initialize_session_state
+from state import state_manager
 from utils import config
 from core import llm_service
 
 st.set_page_config(layout="wide")
 
+
 def main():
     # セッション状態の初期化（すべてのキーは state_manager.py で一元管理）
-    initialize_session_state()
+    state_manager.initialize_session_state()
 
     st.title("論文検索＆可視化＆AI解説")
 
@@ -48,226 +110,321 @@ def main():
     search_bar.render_search_section()
     search_bar.render_search_info_selection_section()
 
-    # --- 2段目：結果のサマリー表示 ---
-    with st.expander("詳細情報"):
-        with st.container(height=500):
-            col1, col2, col3 = st.columns([1, 2, 2])
-            with col1:
-                st.write("### 指定論文の分野配分")
-                if st.session_state["user_input_analysis"]:
-                    result_summary.render__paper_info_analysis(st.session_state["user_input_analysis"].fields)
-            
-            with col2:
-                st.write("### 解析結果")
-                st.caption('ユーザー論文 or 指定した論文の解析結果を出力します。', unsafe_allow_html=True)
-                if st.session_state["user_input_analysis"]:
-                    result_summary.render_paper_analysis_result(st.session_state["user_input_analysis"])
-            
-            with col3:
-                st.write("### 論文情報")
-                #if "selected_paper" in st.session_state:
-                result_summary.render_info_paper(st.session_state["selected_paper"])
-    
-    # --- 3段目：論文ネットワーク＆テキストチャット ---
+    # --- 2段目：論文ネットワークと詳細情報 ---
     with st.container():
-        network_col, chat_col = st.columns(2)
-        
+        network_col, detail_col = st.columns([1, 1])
+
         with network_col:
             st.write("### 論文ネットワーク")
             st.write("---")
             st.caption(
                 '<span style="color:coral; font-weight:bold;">検索された論文の詳細な解析を行う場合は下のボタンを押してください。</span>',
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
             st.caption(
                 '<span style="color:coral; font-weight:bold;">＊処理に時間がかかります</span>',
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
-            if st.session_state["papers"].papers and st.button("解析開始",key="init_2"):
-                pass
+            if st.session_state["papers"].papers and st.button(
+                "一括解析", key="batch_analysis"
+            ):
+                # 取得済みの PaperResult から、すべての論文を解析してキャッシュに保存
+                for paper in st.session_state["papers"].papers:
+                    pid = paper.paper_id
+                    cache_key = f"paper_analysis_{pid}"
+                    # まだ解析していなければ LLM 呼び出し
+                    if cache_key not in st.session_state:
+                        title = paper.title
+                        abstract = paper.abstract or ""
+                        analysis = llm_service.analyze_searched_paper(
+                            f"title: {title}, abstract: {abstract}"
+                        )
+                        st.session_state[cache_key] = analysis
+                # 全件解析後にリラン
+                st.rerun()
 
             if st.session_state["papers"].papers:
-                selected, element_dict, papers_dict = paper_network.render_network_sections(st.session_state["papers"])
+                selected, element_dict, papers_dict = (
+                    paper_network.render_network_sections(st.session_state["papers"])
+                )
                 # 新しい選択結果が存在する場合のみ更新する
                 if selected and "nodes" in selected and selected["nodes"]:
                     if selected["nodes"] != st.session_state["prev_selected_nodes"]:
                         st.session_state["prev_selected_nodes"] = selected["nodes"]
-                        st.session_state["selected_paper"] = paper_network.get_selected_papers(selected, element_dict, papers_dict)
-                        #print(st.session_state["selected_paper"])
+                        state_manager.update_selected_paper(
+                            paper_network.get_selected_papers(
+                                selected, element_dict, papers_dict
+                            )
+                        )
+
                         st.rerun()
-            
-        
-        with chat_col:
-            st.write("### 論文解説AI")
-            st.write("---")
-            st.caption(
+
+        with detail_col:
+            st.write("### 詳細情報")
+            selected_list = st.session_state.get("selected_paper", [])
+            analysis_result = None
+            if selected_list:
+                paper_id = selected_list[0]["paper_id"]
+                cache_key = f"paper_analysis_{paper_id}"
+                if st.button("選択論文を解析", key="analyze_selected"):
+                    title = selected_list[0]["title"]
+                    abstract = selected_list[0]["abstract"]
+                    analysis = llm_service.analyze_searched_paper(
+                        f"title: {title}, abstract: {abstract}"
+                    )
+                    st.session_state[cache_key] = analysis
+                    analysis_result = analysis
+                elif cache_key in st.session_state:
+                    analysis_result = st.session_state[cache_key]
+            elif st.session_state.get("user_input_analysis"):
+                analysis_result = st.session_state["user_input_analysis"]
+
+            with st.expander("分野配分", expanded=True):
+                if analysis_result:
+                    result_summary.render__paper_info_analysis(analysis_result.fields)
+                else:
+                    st.info(
+                        "ユーザー入力解析または論文ネットワークで論文を選択してください。"
+                    )
+
+            with st.expander("解析結果", expanded=True):
+                st.caption(
+                    "ユーザー論文または選択論文の解析結果を表示します。",
+                    unsafe_allow_html=True,
+                )
+                if analysis_result:
+                    result_summary.render_paper_analysis_result(analysis_result)
+                else:
+                    st.info("まずは検索→論文選択、またはAI検索を実行してください。")
+
+            with st.expander("論文情報", expanded=True):
+                result_summary.render_info_paper(selected_list)
+
+    # --- 3段目：論文解説AI ---
+    with st.container():
+        st.write("### 論文解説AI")
+        st.write("---")
+        st.caption(
             '<span style="color:coral; font-weight:bold;">＊新たに選択した論文に関するセッションを始めたい場合は下のボタンを押してください。履歴削除と兼ねています。</span>',
-            unsafe_allow_html=True
-            )
-            st.caption(
-                '<span style="color:coral; font-weight:bold;">＊他のUIの操作は文章生成が完了してから行ってください。（生成中に触ってしまうと途中で止まってしまいます。）</span>',
-                unsafe_allow_html=True
-            )
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            '<span style="color:coral; font-weight:bold;">＊他のUIの操作は文章生成が完了してから行ってください。（生成中に触ってしまうと途中で止まってしまいます。）</span>',
+            unsafe_allow_html=True,
+        )
+
+        spacer_l, chat_col, spacer_r = st.columns([1, 2, 1])
+        with chat_col:
             if st.button("選択された論文の解説 or チャット履歴削除", key="init"):
-                st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+                st.session_state["chat_history"] = [
+                    {"role": "system", "content": config.system_prompt}
+                ]
                 st.session_state["initial_prompt_processed"] = False
-            
+
             # テキストチャットなどの処理をここに記述
             chat_container = st.container(height=600)
             history_placeholder = chat_container.empty()
             stream_placeholder = chat_container.empty()
 
-            # AI検索の場合のテキストチャット
-            #if st.session_state["search_mode"] == "AI検索":
             history_placeholder.markdown(
                 f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
             # 初期入力
-            if not st.session_state["initial_prompt_processed"] and "selected_paper" in st.session_state:
-                chat_panel.render_stream(stream_placeholder, selected_paper=st.session_state["selected_paper"][0])
+            if (
+                not st.session_state["initial_prompt_processed"]
+                and st.session_state.get("selected_paper")
+            ):
+                chat_panel.render_stream(
+                    stream_placeholder, selected_paper=st.session_state["selected_paper"][0]
+                )
                 st.session_state["initial_prompt_processed"] = True
                 history_placeholder.markdown(
                     f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
             st.caption(
                 '<span style="color:coral">＊自動スクロール機能はありません。メッセージ送信後は下にスクロールしてください。</span>',
                 unsafe_allow_html=True,
             )
-            
+
             with st.form(key="chat_form"):
                 user_message = st.text_area("あなたのメッセージ", key="chat_input")
                 submitted = st.form_submit_button("送信")
-            
+
             if submitted and user_message.strip():
-                st.session_state["chat_history"].append({
-                    "role": "user",
-                    "content": user_message
-                })
+                st.session_state["chat_history"].append(
+                    {"role": "user", "content": user_message}
+                )
                 history_placeholder.markdown(
                     f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
                 api_messages = [
-                    {"role": "user" if msg["role"] == "hidden_user" else msg["role"], "content": msg["content"]}
+                    {
+                        "role": "user" if msg["role"] == "hidden_user" else msg["role"],
+                        "content": msg["content"],
+                    }
                     for msg in st.session_state["chat_history"]
                 ]
-                chat_panel.update_chat_history_with_response(api_messages, stream_placeholder)
+                chat_panel.update_chat_history_with_response(
+                    api_messages, stream_placeholder
+                )
                 history_placeholder.markdown(
                     f"{chat_panel.render_history(st.session_state['chat_history'], config.css_text_user, config.css_text_assistant)}</div>",
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
-    main() 
-```
-
-### File: state/state_manager.py
-
-```python
-# state/state_manager.py
-
-import streamlit as st
-from core.data_models import PaperResult, PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    defaults = {
-        "search_mode": "キーワード検索",
-        "first_user_input": "",
-        "papers": PaperResult(),
-        "user_input_analysis": None,
-        "num_search_papers": 10,
-        "year_range": (2023, 2025),
-        "search_engine": "semantic scholar",
-        "selected_paper": [],
-        "prev_selected_nodes": [],
-        "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True,
-    }
-
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-def reset_chat_history():
-    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-    st.session_state["initial_prompt_processed"] = False
-
-def update_selected_paper(selected_paper):
-    st.session_state["selected_paper"] = selected_paper
-    st.session_state["initial_prompt_processed"] = False
-
-def update_paper_results(papers: PaperResult):
-    st.session_state["papers"] = papers
-
-def update_user_input_analysis(analysis: PaperAnalysisResult):
-    st.session_state["user_input_analysis"] = analysis
-
-def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
-    st.session_state["num_search_papers"] = num_search_papers
-    st.session_state["year_range"] = year_range
-    st.session_state["search_engine"] = search_engine
+    main()
 
 ```
 
-### File: state/state_manager_back.py
+### File: requirements.txt
 
-```python
-# state_manager.py
-import streamlit as st
-#from utils.paper_controller import PaperResult
-from core.data_models import PaperResult
-from utils.llm_controller import PaperAnalysisResult
-from utils import config
+```
+altair==5.5.0
+annotated-types==0.7.0
+anyio==4.9.0
+asttokens @ file:///home/conda/feedstock_root/build_artifacts/asttokens_1733250440834/work
+attrs==25.1.0
+beautifulsoup4==4.13.3
+blinker==1.9.0
+cachetools==5.5.2
+certifi @ file:///croot/certifi_1738623731865/work/certifi
+charset-normalizer==3.4.1
+click==8.1.8
+comm @ file:///home/conda/feedstock_root/build_artifacts/comm_1733502965406/work
+contourpy==1.3.1
+cycler==0.12.1
+debugpy @ file:///home/conda/feedstock_root/build_artifacts/debugpy_1741148395697/work
+decorator @ file:///home/conda/feedstock_root/build_artifacts/decorator_1740384970518/work
+distro==1.9.0
+dotenv==0.9.9
+exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1733208806608/work
+executing @ file:///home/conda/feedstock_root/build_artifacts/executing_1733569351617/work
+filelock==3.13.1
+fonttools==4.56.0
+fsspec==2024.6.1
+fugashi==1.4.0
+gitdb==4.0.12
+GitPython==3.1.44
+h11==0.14.0
+httpcore==1.0.7
+httpx==0.28.1
+huggingface-hub==0.29.3
+idna==3.10
+importlib_metadata @ file:///home/conda/feedstock_root/build_artifacts/importlib-metadata_1737420181517/work
+ipykernel @ file:///home/conda/feedstock_root/build_artifacts/ipykernel_1719845459717/work
+ipython @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_ipython_1741457802/work
+jedi @ file:///home/conda/feedstock_root/build_artifacts/jedi_1733300866624/work
+Jinja2==3.1.6
+jiter==0.9.0
+jsonschema==4.23.0
+jsonschema-specifications==2024.10.1
+jupyter_client @ file:///home/conda/feedstock_root/build_artifacts/jupyter_client_1733440914442/work
+jupyter_core @ file:///home/conda/feedstock_root/build_artifacts/jupyter_core_1727163409502/work
+kiwisolver==1.4.8
+MarkupSafe==3.0.2
+matplotlib==3.10.0
+matplotlib-inline @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-inline_1733416936468/work
+mpmath==1.3.0
+narwhals==1.31.0
+nest_asyncio @ file:///home/conda/feedstock_root/build_artifacts/nest-asyncio_1733325553580/work
+networkx==3.3
+numpy==2.2.3
+openai==1.66.5
+outcome==1.3.0.post0
+packaging @ file:///home/conda/feedstock_root/build_artifacts/packaging_1733203243479/work
+pandas==2.2.3
+parso @ file:///home/conda/feedstock_root/build_artifacts/parso_1733271261340/work
+pexpect @ file:///home/conda/feedstock_root/build_artifacts/pexpect_1733301927746/work
+pickleshare @ file:///home/conda/feedstock_root/build_artifacts/pickleshare_1733327343728/work
+pillow==11.1.0
+pinecone==6.0.1
+pinecone-plugin-interface==0.0.7
+platformdirs @ file:///home/conda/feedstock_root/build_artifacts/platformdirs_1733232627818/work
+plotly==6.0.1
+ply==3.11
+prompt_toolkit @ file:///home/conda/feedstock_root/build_artifacts/prompt-toolkit_1737453357274/work
+protobuf==5.29.3
+psutil @ file:///home/conda/feedstock_root/build_artifacts/psutil_1740663128538/work
+ptyprocess @ file:///home/conda/feedstock_root/build_artifacts/ptyprocess_1733302279685/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl#sha256=92c32ff62b5fd8cf325bec5ab90d7be3d2a8ca8c8a3813ff487a8d2002630d1f
+pure_eval @ file:///home/conda/feedstock_root/build_artifacts/pure_eval_1733569405015/work
+pyarrow==19.0.1
+pydantic==2.10.6
+pydantic_core==2.27.2
+pydeck==0.9.1
+Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1736243443484/work
+pyparsing==3.2.1
+PyQt5==5.15.10
+PyQt5_sip @ file:///croot/pyqt-split_1736540531116/work/pyqt_sip
+PySocks==1.7.1
+python-dateutil @ file:///home/conda/feedstock_root/build_artifacts/python-dateutil_1733215673016/work
+python-dotenv==1.0.1
+pytz==2025.1
+PyYAML==6.0.2
+pyzmq @ file:///home/conda/feedstock_root/build_artifacts/pyzmq_1738270958168/work
+referencing==0.36.2
+regex==2024.11.6
+requests==2.32.3
+rpds-py==0.23.1
+safetensors==0.5.3
+selenium==4.30.0
+sentencepiece==0.2.0
+sip @ file:///croot/sip_1736541134699/work
+six @ file:///home/conda/feedstock_root/build_artifacts/six_1733380938961/work
+smmap==5.0.2
+sniffio==1.3.1
+sortedcontainers==2.4.0
+soupsieve==2.6
+st-cytoscape==0.0.5
+stack_data @ file:///home/conda/feedstock_root/build_artifacts/stack_data_1733569443808/work
+streamlit==1.43.1
+sympy==1.13.1
+tenacity==9.0.0
+tokenizers==0.21.0
+toml==0.10.2
+tomli @ file:///opt/conda/conda-bld/tomli_1657175507142/work
+torch==2.6.0+cpu
+torchaudio==2.6.0+cpu
+torchvision==0.21.0+cpu
+tornado==5.0
+tqdm==4.67.1
+traitlets @ file:///home/conda/feedstock_root/build_artifacts/traitlets_1733367359838/work
+transformers==4.49.0
+trio==0.29.0
+trio-websocket==0.12.2
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1733188668063/work
+tzdata==2025.1
+unidic-lite==1.0.8
+urllib3==2.3.0
+watchdog==6.0.0
+wcwidth @ file:///home/conda/feedstock_root/build_artifacts/wcwidth_1733231326287/work
+webdriver-manager==4.0.2
+websocket-client==1.8.0
+wsproto==1.2.0
+zipp @ file:///home/conda/feedstock_root/build_artifacts/zipp_1732827521216/work
 
-def initialize_session_state():
-    # 検索モードと入力値
-    if "search_mode" not in st.session_state:
-        st.session_state["search_mode"] = "キーワード検索"
-    if "first_user_input" not in st.session_state:
-        st.session_state["first_user_input"] = ""
-    
-    # 論文検索結果
-    if "papers" not in st.session_state:
-        st.session_state["papers"] = PaperResult()
-    
-    # ユーザー入力解析結果
-    if "user_input_analysis" not in st.session_state:
-        st.session_state["user_input_analysis"] = None
-
-    # 検索に関するオプション
-    if "num_search_papers" not in st.session_state:
-        st.session_state["num_search_papers"] = 10
-    if "year_range" not in st.session_state:
-        st.session_state["year_range"] = (2023, 2025)
-    if "search_engine" not in st.session_state:
-        st.session_state["search_engine"] = "semantic scholar"
-
-    # ネットワークで選択された論文
-    if "selected_paper" not in st.session_state:
-        st.session_state["selected_paper"] = []
-
-    # 論文表示のための1つ前の論文保存用
-    if "prev_selected_nodes" not in st.session_state:
-        st.session_state["prev_selected_nodes"] = []
-
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-        st.session_state["initial_prompt_processed"] = True
 ```
 
 ### File: utils/config.py
 
 ```python
 # 実験用のmessage　ユーザー論文あり
-experiment_message = '''
-以下は論文の情報です。  
-"論文のタイトル、論文のアブストラクト"  
-の順で与えられます。  
+import os
+from .field_colors import FIELD_LIST, FIELD_NAMES
+
+# デフォルトで使用するOllamaモデル名を環境変数から指定可能にする
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
+#OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-q8_0")
+_experiment_message_template = '''
+以下は論文の情報です。
+"論文のタイトル、論文のアブストラクト"
+の順で与えられます。
 
 まずは論文をよく読んで、その論文が意味する核の部分をとらえてください。  
 この論文について、以下の4つの情報を出力してください。出力は必ず指定されたJSON構造に従ってください。  
@@ -281,8 +438,8 @@ experiment_message = '''
 　他の分野のスコアは、それに対して**どの程度関連しているか**を0.0〜1.0の範囲で設定してください。  
 　2つ以上の分野を出力してください。  
 
-選択可能な分野（fields）：  
-ロボティクス, 電子工学, 機械工学, 材料工学, 化学, 物理学, 生物学, 医学, 薬学, 環境科学, 農学, 数学, 地球科学, 哲学, 心理学, 社会学, 教育学, 法学, 政治学, 経済学, 経営学, 言語学, 文学, 歴史学, 文化人類学, メディア学, 芸術学, 土木工学, 交通工学, 建築工学
+選択可能な分野（fields）：
+{FIELD_NAMES}
 
 ---
 
@@ -352,11 +509,14 @@ experiment_message = '''
 }
 ```
 
-”””
+"""
 多次元センサデータ処理のためのTransformerを用いた自己教師あり学習手法,センサ信号を入力として,人間行動認識を行う深層学習アルゴリズムを開発した. ここでは自然言語で用いられるTransformerに基づいた事前学習言語モデルを構築して, その事前学習言語モデルを用いて,下流タスクである人間行動認識タスクを解く形を追求する. VanillaのTransformerでもこれは可能であるが, ここでは, 線形層によるn次元数値データの埋め込み、ビン化処理、出力層の線形処理層という３つの要素を特色とするｎ次元数値処理トランスフォーマーを提案する。5種類のデータセットに対して、このモデルの効果を確かめた. VanillaのTransformerと比較して, 精度で10%～15%程度, 向上させることができた
-”””'''
+"""'''
+
+experiment_message = _experiment_message_template.replace("{FIELD_NAMES}", FIELD_NAMES)
+
 # json出力(検索クエリまで出力)するためのユーザー論文指定なしのもの
-experiment_message_without_paper = """
+_message_without_paper_template = """
 以下は論文の情報です。
 "論文のタイトル、論文のアブストラクト"
 の順で与えられます。
@@ -377,7 +537,7 @@ experiment_message_without_paper = """
 　2つ以上の分野を出力してください。
 
 選択可能な分野（fields）：
-ロボティクス, 電子工学, 機械工学, 材料工学, 化学, 物理学, 生物学, 医学, 薬学, 環境科学, 農学, 数学, 地球科学, 哲学, 心理学, 社会学, 教育学, 法学, 政治学, 経済学, 経営学, 言語学, 文学, 歴史学, 文化人類学, メディア学, 芸術学, 土木工学, 交通工学, 建築工学
+{FIELD_NAMES}
 
 ---
 
@@ -443,11 +603,14 @@ experiment_message_without_paper = """
   }
 }
 ```"""
+
+experiment_message_without_paper = _message_without_paper_template.replace("{FIELD_NAMES}", FIELD_NAMES)
+
 # ユーザー論文と検索クエリなしのもの。
-llm_init_prompt_field_main_factor = """
-以下は論文の情報です。  
-"論文のタイトル、論文のアブストラクト"  
-の順で与えられます。  
+_field_main_factor_template = """
+以下は論文の情報です。
+"論文のタイトル、論文のアブストラクト"
+の順で与えられます。
 
 まずは論文をよく読んで、その論文が意味する核の部分をとらえてください。  
 この論文について、以下の3つの情報を出力してください。出力は必ず指定されたJSON構造に従ってください。  
@@ -461,8 +624,8 @@ llm_init_prompt_field_main_factor = """
 　他の分野のスコアは、どの程度関連しているかを0.0〜1.0の範囲で設定してください。  
 　2つ以上の分野を出力してください。  
 
-選択可能な分野（fields）：  
-ロボティクス, 電子工学, 機械工学, 材料工学, 化学, 物理学, 生物学, 医学, 薬学, 環境科学, 農学, 数学, 地球科学, 哲学, 心理学, 社会学, 教育学, 法学, 政治学, 経済学, 経営学, 言語学, 文学, 歴史学, 文化人類学, メディア学, 芸術学, 土木工学, 交通工学, 建築工学
+選択可能な分野（fields）：
+{FIELD_NAMES}
 
 ---
 
@@ -502,6 +665,9 @@ llm_init_prompt_field_main_factor = """
 }
 
 ```"""
+
+llm_init_prompt_field_main_factor = _field_main_factor_template.replace("{FIELD_NAMES}", FIELD_NAMES)
+
 system_prompt = "あなたは誠実で優秀な日本人のアシスタントです。特に指示が無い場合は、常に日本語で回答してください。"
 css_text_user = (
             '<div class="chat-box" style="background-color: rgba(255,255,255,0.9);'
@@ -545,39 +711,7 @@ unified_schema = {
                 "properties": {
                     "name": {
                         "type": "string",
-                        "enum": [
-                            "情報科学",
-                            "ロボティクス",
-                            "電子工学",
-                            "機械工学",
-                            "材料工学",
-                            "化学",
-                            "物理学",
-                            "生物学",
-                            "医学",
-                            "薬学",
-                            "環境科学",
-                            "農学",
-                            "数学",
-                            "地球科学",
-                            "哲学",
-                            "心理学",
-                            "社会学",
-                            "教育学",
-                            "法学",
-                            "政治学",
-                            "経済学",
-                            "経営学",
-                            "言語学",
-                            "文学",
-                            "歴史学",
-                            "文化人類学",
-                            "メディア学",
-                            "芸術学",
-                            "土木工学",
-                            "交通工学",
-                            "建築工学"
-                        ]
+                        "enum": FIELD_LIST
                     },
                     "score": {
                         "type": "number",
@@ -769,6 +903,13 @@ structured_json_schema = {
 
 ```python
 import math
+from collections import defaultdict
+from . import field_colors
+
+
+def _short_label(title: str, length: int = 20) -> str:
+    """Return a shortened title for display."""
+    return title if len(title) <= length else title[: length - 1] + "…"
 
 def build_cy_elements_simple(papers: list) -> list:
     """
@@ -794,7 +935,7 @@ def build_cy_elements_simple(papers: list) -> list:
     
     num_papers = len(papers.papers)
     # 論文ノードを中心の周りに円形に配置
-    radius = 100  # 中心からの距離（必要に応じて調整）
+    radius = 200  # 中心からの距離を広めに取る
     angle_step = 2 * math.pi / num_papers if num_papers > 0 else 0
 
     for i, paper in enumerate(papers.papers,start=1):
@@ -802,14 +943,14 @@ def build_cy_elements_simple(papers: list) -> list:
         paper_id = paper.paper_id
         node_id = f"paper_{paper_id}"
         angle = i * angle_step
-        x = (radius+i*10) * math.cos(angle)
-        y = (radius+i*10) * math.sin(angle)
+        x = (radius + i * 15) * math.cos(angle)
+        y = (radius + i * 15) * math.sin(angle)
         
         node = {
             "data": {
                 "id": node_id,
                 "paper_id": paper_id,
-                "label": paper.title,
+                "label": _short_label(paper.title),
                 "title": paper.title,
                 "abstract": paper.abstract,
                 "url": paper.url,
@@ -831,30 +972,137 @@ def build_cy_elements_simple(papers: list) -> list:
     
     return elements
 
-# テスト用のサンプルデータ（与えられた例）
-papers = [
-    {
-        "title": "A Data Efficient Vision Transformer for Robust Human Activity Recognition from the Spectrograms of Wearable Sensor Data",
-        "abstract": ("This study introduces the Data Efficient Separable Transformer (DeSepTr) architecture, "
-                     "a novel framework for Human Activity Recognition (HAR) that utilizes a light-weight computer vision model "
-                     "to train a Vision Transformer (ViT) on spectrograms generated from wearable sensor data. "
-                     "The proposed model achieves strong results on several HAR tasks, including surface condition recognition "
-                     "and activity recognition. Compared to the ResNet-18 model, DeSepTr outperforms by 5.9% on out-of-distribution "
-                     "test data accuracy for surface condition recognition. The framework enables ViTs to learn from limited labeled "
-                     "training data and generalize to data from participants outside of the training cohort, potentially leading to "
-                     "the development of activity recognition models that are robust to the wider population. The results suggest that "
-                     "the DeSepTr architecture can overcome limitations related to the heterogeneity of individuals’ behavior patterns "
-                     "and the weak inductive bias of transformer algorithms."),
-        "url": "https://www.semanticscholar.org/paper/4394e581e2fa1685072ebe9e27a026f8f6191c24",
-        "paper_id": "4394e581e2fa1685072ebe9e27a026f8f6191c24"
-    }
+
+def build_cy_elements_by_field(papers, analysis_map):
+    """Create Cytoscape elements grouped by field.
+
+    Parameters
+    ----------
+    papers : PaperResult
+        Search result papers.
+    analysis_map : dict
+        Mapping from paper_id to PaperAnalysisResult.
+    """
+    elements = []
+
+    center_node = {"data": {"id": "center", "label": "your paper", "type": "center"}, "position": {"x": 0, "y": 0}}
+    elements.append(center_node)
+
+    # Group papers by first and second field
+    field_groups = defaultdict(lambda: defaultdict(list))
+    for paper in papers.papers:
+        analysis = analysis_map.get(paper.paper_id)
+        if not analysis or not analysis.fields:
+            field_groups["Unknown"]["Unknown"].append(paper)
+            continue
+        first = analysis.fields[0].name
+        second = analysis.fields[1].name if len(analysis.fields) > 1 else "Other"
+        field_groups[first][second].append(paper)
+
+    num_fields = len(field_groups)
+    radius = 300
+    angle_step = 2 * math.pi / num_fields if num_fields else 0
+    for idx, (field, subdict) in enumerate(field_groups.items()):
+        angle = idx * angle_step
+        fx = radius * math.cos(angle)
+        fy = radius * math.sin(angle)
+        field_id = f"field_{idx}"
+        field_node = {
+            "data": {
+                "id": field_id,
+                "label": field,
+                "type": "field",
+                "color": field_colors.get_field_color(field),
+            },
+            "position": {"x": fx, "y": fy},
+        }
+        elements.append(field_node)
+        elements.append({"data": {"id": f"edge_center_{field_id}", "source": "center", "target": field_id}})
+
+        sub_radius = 150
+        num_sub = len(subdict)
+        sub_angle = 2 * math.pi / num_sub if num_sub else 0
+        for sidx, (subfield, plist) in enumerate(subdict.items()):
+            s_angle = sidx * sub_angle
+            sfx = fx + sub_radius * math.cos(s_angle)
+            sfy = fy + sub_radius * math.sin(s_angle)
+            sub_id = f"{field_id}_{sidx}"
+            sub_node = {
+                "data": {
+                    "id": sub_id,
+                    "label": subfield,
+                    "type": "subfield",
+                    "color": field_colors.get_field_color(subfield),
+                },
+                "position": {"x": sfx, "y": sfy},
+            }
+            elements.append(sub_node)
+            elements.append({"data": {"id": f"edge_{field_id}_{sub_id}", "source": field_id, "target": sub_id}})
+
+            paper_radius = 80
+            paper_angle = 2 * math.pi / len(plist) if plist else 0
+            for j, paper in enumerate(plist):
+                px = sfx + (paper_radius + j * 15) * math.cos(j * paper_angle)
+                py = sfy + (paper_radius + j * 15) * math.sin(j * paper_angle)
+                node_id = f"paper_{paper.paper_id}"
+                node = {
+                    "data": {
+                        "id": node_id,
+                        "paper_id": paper.paper_id,
+                        "label": _short_label(paper.title),
+                        "title": paper.title,
+                        "abstract": paper.abstract,
+                        "url": paper.url,
+                        "color": field_colors.get_field_color(subfield),
+                        "type": "paper",
+                        "relatedness": j + 1,
+                    },
+                    "position": {"x": px, "y": py},
+                }
+                elements.append(node)
+                elements.append({"data": {"id": f"edge_{sub_id}_{node_id}", "source": sub_id, "target": node_id}})
+
+    return elements
+
+```
+
+### File: utils/field_colors.py
+
+```python
+import plotly.express as px
+
+FIELD_LIST = [
+    "transformer","人工知能", "ロボティクス", "電子工学", "機械工学", "材料工学",
+    "化学", "物理学", "生物学", "医学", "薬学", "環境科学", "農学", "数学",
+    "地球科学", "哲学", "心理学", "社会学", "教育学", "法学", "政治学",
+    "経済学", "経営学", "言語学", "文学", "歴史学", "文化人類学", "メディア学",
+    "芸術学", "土木工学", "交通工学", "建築工学",
 ]
 
-if __name__ == "__main__":
-    elements = build_cy_elements_simple(papers)
-    # 作成された要素を確認（デバッグ用）
-    from pprint import pprint
-    pprint(elements)
+# Comma-separated string of field names for prompt templates
+FIELD_NAMES = ", ".join(FIELD_LIST)
+
+# large palette to support many fields
+_DEFAULT_COLORS = px.colors.qualitative.Dark24 + px.colors.qualitative.Light24
+
+FIELD_COLOR_MAP = {
+    name: _DEFAULT_COLORS[i % len(_DEFAULT_COLORS)]
+    for i, name in enumerate(FIELD_LIST)
+}
+
+
+def get_field_color(name: str) -> str:
+    """Return a color for the given field name.
+
+    If the field is not predefined, a color is selected deterministically
+    based on the hash of the name so the same field gets the same color
+    across sessions.
+    """
+    if name not in FIELD_COLOR_MAP:
+        index = abs(hash(name)) % len(_DEFAULT_COLORS)
+        FIELD_COLOR_MAP[name] = _DEFAULT_COLORS[index]
+    return FIELD_COLOR_MAP[name]
+
 ```
 
 ### File: utils/llm_controller.py
@@ -922,7 +1170,7 @@ def search_paper_lmstudio_controllar(input: str):
 def user_paper_ollama_controllar(input: str):
     #client = OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
     #MODEL = "gemma3:12b"
-    MODEL = "gemma-textonly_v3:latest"
+    MODEL = config.OLLAMA_MODEL
     #messages = [{
     #    "role": "user",
     #    "content": config.experiment_message_without_paper + input
@@ -992,6 +1240,129 @@ if __name__ == "__main__":
     print("abstract:", data.paper[0].abstract)
 ```
 
+### File: new_repo/AGENTS.md
+
+```markdown
+# AGENTS for new_repo
+
+このディレクトリでは、React(TypeScript)フロントエンドとPythonバックエンドへの移行計画を管理します。
+
+## ガイドライン
+- ドキュメントや設定ファイルのみを配置し、アプリケーションコードは含めないこと。
+- バックエンドは FastAPI を想定していますが、検討段階のため確定ではありません。
+- 新しいリポジトリ作成時に、このディレクトリ内のファイルをコピーして使用します。
+
+```
+
+### File: state/state_manager.py
+
+```python
+# state/state_manager.py
+
+import streamlit as st
+from core.data_models import PaperResult, PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    defaults = {
+        "search_mode": "キーワード検索",
+        "first_user_input": "",
+        "papers": PaperResult(),
+        "user_input_analysis": None,
+        "paper_analysis": None,
+        "num_search_papers": 10,
+        "year_range": (2023, 2025),
+        "search_engine": "semantic scholar",
+        "selected_paper": [],
+        "prev_selected_nodes": [],
+        "chat_history": [{"role": "system", "content": config.system_prompt}],
+        "initial_prompt_processed": True,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+def reset_chat_history():
+    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+    st.session_state["initial_prompt_processed"] = False
+
+def update_selected_paper(selected_paper):
+    st.session_state["selected_paper"] = selected_paper
+    #st.session_state["initial_prompt_processed"] = False
+
+def update_paper_results(papers: PaperResult):
+    st.session_state["papers"] = papers
+
+def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
+    st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
+
+def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
+    st.session_state["num_search_papers"] = num_search_papers
+    st.session_state["year_range"] = year_range
+    st.session_state["search_engine"] = search_engine
+
+```
+
+### File: state/state_manager_back.py
+
+```python
+# state_manager.py
+import streamlit as st
+#from utils.paper_controller import PaperResult
+from core.data_models import PaperResult
+from utils.llm_controller import PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    # 検索モードと入力値
+    if "search_mode" not in st.session_state:
+        st.session_state["search_mode"] = "キーワード検索"
+    if "first_user_input" not in st.session_state:
+        st.session_state["first_user_input"] = ""
+    
+    # 論文検索結果
+    if "papers" not in st.session_state:
+        st.session_state["papers"] = PaperResult()
+    
+    # ユーザー入力解析結果
+    if "user_input_analysis" not in st.session_state:
+        st.session_state["user_input_analysis"] = None
+
+    # 検索に関するオプション
+    if "num_search_papers" not in st.session_state:
+        st.session_state["num_search_papers"] = 10
+    if "year_range" not in st.session_state:
+        st.session_state["year_range"] = (2023, 2025)
+    if "search_engine" not in st.session_state:
+        st.session_state["search_engine"] = "semantic scholar"
+
+    # ネットワークで選択された論文
+    if "selected_paper" not in st.session_state:
+        st.session_state["selected_paper"] = []
+
+    # 論文表示のための1つ前の論文保存用
+    if "prev_selected_nodes" not in st.session_state:
+        st.session_state["prev_selected_nodes"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+        st.session_state["initial_prompt_processed"] = True
+```
+
 ### File: ui/chat_panel.py
 
 ```python
@@ -1022,7 +1393,9 @@ def update_chat_history_with_response(api_messages, stream_placeholder):
     """
     LLM APIからのストリーミングレスポンスを処理し、チャット履歴を更新する。
     """
+    #MODEL = config.OLLAMA_MODEL
     MODEL = "gemma3:12b"
+    #MODEL = "deepseek-r1:8b-0528-qwen3-q8_0"
     assistant_response = ""
     #stream_placeholder = st.empty()  # ストリーミング更新用プレースホルダー
     for updated_text in ollama_api.stream_chat_response(model_name=MODEL,messages=api_messages):
@@ -1072,20 +1445,35 @@ def render_stream(stream_placeholder, selected_paper):
 # ui/paper_network_and_basic_info.py
 import streamlit as st
 from utils import cytoscape_utils
+from utils import field_colors
 from st_cytoscape import cytoscape
 
 def render_network_sections(papers, details=False):
-    elements = cytoscape_utils.build_cy_elements_simple(papers)
+    analysis_map = {}
+    all_analyzed = True
+    for paper in papers.papers:
+        key = f"paper_analysis_{paper.paper_id}"
+        analysis = st.session_state.get(key)
+        if analysis:
+            analysis_map[paper.paper_id] = analysis
+        else:
+            all_analyzed = False
+
+    if all_analyzed and analysis_map:
+        elements = cytoscape_utils.build_cy_elements_by_field(papers, analysis_map)
+    else:
+        elements = cytoscape_utils.build_cy_elements_simple(papers)
     style_sheet = [
         {
             "selector": "node",
             "style": {
                 "label": "data(label)",
-                "font-size": "12px",
+                "font-size": "10px",
                 "color": "#333",
-                "width": "30px",
-                "height": "30px",
-            }
+                "background-color": "data(color)",
+                "width": "35px",
+                "height": "35px",
+            },
         },
         {
             "selector": "edge",
@@ -1105,6 +1493,18 @@ def render_network_sections(papers, details=False):
                 "border-width": "2px",
             }
         },
+        {
+            "selector": "[type='field']",
+            "style": {"shape": "rectangle", "width": "50px", "height": "50px"},
+        },
+        {
+            "selector": "[type='subfield']",
+            "style": {"shape": "round-rectangle", "width": "45px", "height": "45px"},
+        },
+        {
+            "selector": "[type='paper']",
+            "style": {"shape": "ellipse", "width": "35px", "height": "35px"},
+        },
     ]
     layout = {"name": "preset"}
     
@@ -1112,7 +1512,7 @@ def render_network_sections(papers, details=False):
         selected = cytoscape(
             elements,
             style_sheet,
-            height="700px",
+            height="800px",
             layout=layout,
             key="graph",
             selection_type="single",
@@ -1161,6 +1561,7 @@ def get_selected_papers(selected, element_dict, papers_dict):
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from utils.field_colors import get_field_color
 
 def render__paper_info_analysis(fields):
     if not fields:
@@ -1175,12 +1576,16 @@ def render__paper_info_analysis(fields):
     df = pd.DataFrame(data).copy().sort_values("percentage", ascending=False)
     sorted_names = df["name"].tolist()
 
+    color_map = {name: get_field_color(name) for name in df["name"]}
+
     fig = px.pie(
         df,
         names="name",
         values="percentage",
         title="各分野の割合（多い順・時計回り）",
-        category_orders={"name": sorted_names}
+        category_orders={"name": sorted_names},
+        color="name",
+        color_discrete_map=color_map,
     )
     fig.update_traces(direction="clockwise")
     st.plotly_chart(fig, use_container_width=True)
@@ -1214,6 +1619,7 @@ def render_info_paper(papers):
         st.write(f"URL: {paper['url']}")
         st.write(f"アブストラクト：\n {paper['abstract']}")
         st.write("---")
+
 ```
 
 ### File: ui/search_bar.py
@@ -1275,142 +1681,29 @@ def render_search_info_selection_section():
         search_num_col, year_col, search_engine_col = st.columns([1, 1, 1])
 
         with search_num_col:
-            num_search_papers = st.slider(
-                "検索する論文数", 1, 50, st.session_state["num_search_papers"]
+            st.slider(
+                "検索する論文数",
+                1,
+                50,
+                st.session_state["num_search_papers"],
+                key="num_search_papers",
             )
         with year_col:
-            year_range = st.slider(
-                "発行年の範囲", 1970, 2025, st.session_state["year_range"]
+            st.slider(
+                "発行年の範囲",
+                1970,
+                2025,
+                st.session_state["year_range"],
+                key="year_range",
             )
         with search_engine_col:
-            search_engine = st.radio(
+            st.radio(
                 "検索エンジン選択:",
                 ("semantic scholar", "Google Scholar"),
                 horizontal=True,
-                key="search_engine"
+                key="search_engine",
             )
 
-        if st.button("オプション設定更新"):
-            state_manager.update_search_settings(num_search_papers, year_range, search_engine)
-
-```
-
-### File: core/data_models.py
-
-```python
-from dataclasses import dataclass, field
-from typing import List, Optional
-
-@dataclass
-class PaperField:
-    name: str
-    score: float
-
-@dataclass
-class Label:
-    ja: str
-    en: str
-
-@dataclass
-class PaperAnalysisResult:
-    fields: List[PaperField]
-    target: Label
-    title: Optional[str] = None
-    methods: Optional[List[Label]] = None
-    factors: Optional[List[Label]] = None
-    metrics: Optional[List[Label]] = None
-    search_keywords: Optional[List[Label]] = None
-    main_keywords: Optional[List[Label]] = None
-
-@dataclass
-class PaperInfo:
-    title: str
-    abstract: Optional[str]
-    url: str
-    paper_id: str
-    relatedness: Optional[int] = None
-
-@dataclass
-class PaperResult:
-    papers: List[PaperInfo] = field(default_factory=list)
-
-```
-
-### File: core/llm_service.py
-
-```python
-# core/llm_service.py
-
-from core.data_models import PaperAnalysisResult, PaperField, Label
-from api import ollama_api, lm_studio_api
-from utils import config
-
-def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2("gemma-textonly_v3:latest", prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.llm_init_prompt_field_main_factor + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response("gemma3:12b", [{"role": "user", "content": prompt}])
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        main_keywords=[Label(**kw) for kw in data["labels"]["main_keywords"]]
-    )
-
-```
-
-### File: core/paper_service.py
-
-```python
-# 論文APIへのアクセスロジック
-# core/paper_service.py
-
-from core.data_models import PaperResult, PaperInfo
-from api.paper_api import search_papers_semantic
-from typing import Tuple
-
-def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
-    year_from, year_to = year_range
-    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
-    
-    papers = [
-        PaperInfo(
-            title=paper["title"],
-            abstract=paper.get("abstract"),
-            url=paper["url"],
-            paper_id=paper["paperId"]
-        )
-        for paper in raw_papers
-    ]
-    return PaperResult(papers=papers)
 
 ```
 
@@ -1691,7 +1984,7 @@ def stream_chat_response(model_name: str, messages: list, temperature: float = 0
 
 if __name__ == "__main__":
     # 非ストリーミング生成の例
-    model = "gemma3:12b"
+    model = config.OLLAMA_MODEL
     prompt = "自己紹介をお願いします"
     try:
         structured_response = get_structured_response(model, prompt)
@@ -1774,5 +2067,128 @@ if __name__ == "__main__":
     data = search_papers_semantic(query=query, year_from=2023, limit=20)
     print(data)
     print(len(data))
+```
+
+### File: core/data_models.py
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PaperField:
+    name: str
+    score: float
+
+@dataclass
+class Label:
+    ja: str
+    en: str
+
+@dataclass
+class PaperAnalysisResult:
+    fields: List[PaperField]
+    target: Label
+    title: Optional[str] = None
+    methods: Optional[List[Label]] = None
+    factors: Optional[List[Label]] = None
+    metrics: Optional[List[Label]] = None
+    search_keywords: Optional[List[Label]] = None
+    main_keywords: Optional[List[Label]] = None
+
+@dataclass
+class PaperInfo:
+    title: str
+    abstract: Optional[str]
+    url: str
+    paper_id: str
+    relatedness: Optional[int] = None
+
+@dataclass
+class PaperResult:
+    papers: List[PaperInfo] = field(default_factory=list)
+
+```
+
+### File: core/llm_service.py
+
+```python
+# core/llm_service.py
+
+from core.data_models import PaperAnalysisResult, PaperField, Label
+from api import ollama_api, lm_studio_api
+from utils import config
+
+def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+```
+
+### File: core/paper_service.py
+
+```python
+# 論文APIへのアクセスロジック
+# core/paper_service.py
+
+from core.data_models import PaperResult, PaperInfo
+from api.paper_api import search_papers_semantic
+from typing import Tuple
+
+def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
+    year_from, year_to = year_range
+    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+    
+    papers = [
+        PaperInfo(
+            title=paper["title"],
+            abstract=paper.get("abstract"),
+            url=paper["url"],
+            paper_id=paper["paperId"]
+        )
+        for paper in raw_papers
+    ]
+    return PaperResult(papers=papers)
+
 ```
 
