@@ -13,6 +13,9 @@ paper_search/
 │   ├── data_models.py
 │   ├── llm_service.py
 │   └── paper_service.py
+├── new_repo
+│   ├── AGENTS.md
+│   └── README.md
 ├── requirements.txt
 ├── state
 │   ├── state_manager.py
