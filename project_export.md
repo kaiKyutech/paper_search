@@ -3,16 +3,18 @@
 ```
 paper_search/
 ├── AGENTS.md
-├── new_repo
-│   └── AGENTS.md
+├── docker-compose.yml
 ├── react_app
 │   ├── backend
+│   │   ├── Dockerfile
 │   │   ├── main.py
 │   │   └── requirements.txt
 │   └── frontend
+│       ├── Dockerfile
 │       └── src
 │           └── main.tsx
 └── streamlit_app
+    ├── Dockerfile
     ├── __init__.py
     ├── api
     │   ├── __init__.py
@@ -56,22 +58,23 @@ paper_search/
 paper_search/
 ├── AGENTS.md
 ├── README.md
+├── docker-compose.yml
 ├── pulling_files.py
 ├── project_export.md
-├── new_repo
-│   ├── AGENTS.md
-│   └── README.md
 ├── react_app
 │   ├── backend
+│   │   ├── Dockerfile
 │   │   ├── README.md
 │   │   ├── main.py
 │   │   └── requirements.txt
 │   └── frontend
+│       ├── Dockerfile
 │       ├── README.md
 │       ├── package.json
 │       └── src
 │           └── main.tsx
 └── streamlit_app
+    ├── Dockerfile
     ├── api
     │   ├── lm_studio_api.py
     │   ├── ollama_api.py
@@ -113,6 +116,52 @@ paper_search/
 ## テスト
 - テストコードが存在する場合は `pytest` を実行すること
 - テストが無い場合は `pytest` 実行結果が `no tests ran` であっても問題ない
+
+```
+
+### File: docker-compose.yml
+
+```
+version: '3.8'
+services:
+  streamlit:
+    build:
+      context: ./streamlit_app
+    ports:
+      - "8501:8501"
+    container_name: streamlit_app
+    environment:
+      - OLLAMA_API_BASE_URL=http://host.docker.internal:11435
+    extra_hosts:
+      - host.docker.internal:host-gateway
+  backend:
+    build:
+      context: ./react_app/backend
+    ports:
+      - "8000:8000"
+    container_name: fastapi_backend
+  frontend:
+    build:
+      context: ./react_app/frontend
+    ports:
+      - "5173:5173"
+    container_name: react_frontend
+    depends_on:
+      - backend
+
+```
+
+### File: streamlit_app/Dockerfile
+
+```
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+ENV OLLAMA_API_BASE_URL=http://host.docker.internal:11435
+COPY . /app
+EXPOSE 8501
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
 
 ```
 
@@ -321,128 +370,14 @@ if __name__ == "__main__":
 ### File: streamlit_app/requirements.txt
 
 ```
-altair==5.5.0
-annotated-types==0.7.0
-anyio==4.9.0
-asttokens @ file:///home/conda/feedstock_root/build_artifacts/asttokens_1733250440834/work
-attrs==25.1.0
-beautifulsoup4==4.13.3
-blinker==1.9.0
-cachetools==5.5.2
-certifi @ file:///croot/certifi_1738623731865/work/certifi
-charset-normalizer==3.4.1
-click==8.1.8
-comm @ file:///home/conda/feedstock_root/build_artifacts/comm_1733502965406/work
-contourpy==1.3.1
-cycler==0.12.1
-debugpy @ file:///home/conda/feedstock_root/build_artifacts/debugpy_1741148395697/work
-decorator @ file:///home/conda/feedstock_root/build_artifacts/decorator_1740384970518/work
-distro==1.9.0
-dotenv==0.9.9
-exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1733208806608/work
-executing @ file:///home/conda/feedstock_root/build_artifacts/executing_1733569351617/work
-filelock==3.13.1
-fonttools==4.56.0
-fsspec==2024.6.1
-fugashi==1.4.0
-gitdb==4.0.12
-GitPython==3.1.44
-h11==0.14.0
-httpcore==1.0.7
-httpx==0.28.1
-huggingface-hub==0.29.3
-idna==3.10
-importlib_metadata @ file:///home/conda/feedstock_root/build_artifacts/importlib-metadata_1737420181517/work
-ipykernel @ file:///home/conda/feedstock_root/build_artifacts/ipykernel_1719845459717/work
-ipython @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_ipython_1741457802/work
-jedi @ file:///home/conda/feedstock_root/build_artifacts/jedi_1733300866624/work
-Jinja2==3.1.6
-jiter==0.9.0
-jsonschema==4.23.0
-jsonschema-specifications==2024.10.1
-jupyter_client @ file:///home/conda/feedstock_root/build_artifacts/jupyter_client_1733440914442/work
-jupyter_core @ file:///home/conda/feedstock_root/build_artifacts/jupyter_core_1727163409502/work
-kiwisolver==1.4.8
-MarkupSafe==3.0.2
-matplotlib==3.10.0
-matplotlib-inline @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-inline_1733416936468/work
-mpmath==1.3.0
-narwhals==1.31.0
-nest_asyncio @ file:///home/conda/feedstock_root/build_artifacts/nest-asyncio_1733325553580/work
-networkx==3.3
-numpy==2.2.3
-openai==1.66.5
-outcome==1.3.0.post0
-packaging @ file:///home/conda/feedstock_root/build_artifacts/packaging_1733203243479/work
-pandas==2.2.3
-parso @ file:///home/conda/feedstock_root/build_artifacts/parso_1733271261340/work
-pexpect @ file:///home/conda/feedstock_root/build_artifacts/pexpect_1733301927746/work
-pickleshare @ file:///home/conda/feedstock_root/build_artifacts/pickleshare_1733327343728/work
-pillow==11.1.0
-pinecone==6.0.1
-pinecone-plugin-interface==0.0.7
-platformdirs @ file:///home/conda/feedstock_root/build_artifacts/platformdirs_1733232627818/work
-plotly==6.0.1
-ply==3.11
-prompt_toolkit @ file:///home/conda/feedstock_root/build_artifacts/prompt-toolkit_1737453357274/work
-protobuf==5.29.3
-psutil @ file:///home/conda/feedstock_root/build_artifacts/psutil_1740663128538/work
-ptyprocess @ file:///home/conda/feedstock_root/build_artifacts/ptyprocess_1733302279685/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl#sha256=92c32ff62b5fd8cf325bec5ab90d7be3d2a8ca8c8a3813ff487a8d2002630d1f
-pure_eval @ file:///home/conda/feedstock_root/build_artifacts/pure_eval_1733569405015/work
-pyarrow==19.0.1
-pydantic==2.10.6
-pydantic_core==2.27.2
-pydeck==0.9.1
-Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1736243443484/work
-pyparsing==3.2.1
-PyQt5==5.15.10
-PyQt5_sip @ file:///croot/pyqt-split_1736540531116/work/pyqt_sip
-PySocks==1.7.1
-python-dateutil @ file:///home/conda/feedstock_root/build_artifacts/python-dateutil_1733215673016/work
-python-dotenv==1.0.1
-pytz==2025.1
-PyYAML==6.0.2
-pyzmq @ file:///home/conda/feedstock_root/build_artifacts/pyzmq_1738270958168/work
-referencing==0.36.2
-regex==2024.11.6
-requests==2.32.3
-rpds-py==0.23.1
-safetensors==0.5.3
-selenium==4.30.0
-sentencepiece==0.2.0
-sip @ file:///croot/sip_1736541134699/work
-six @ file:///home/conda/feedstock_root/build_artifacts/six_1733380938961/work
-smmap==5.0.2
-sniffio==1.3.1
-sortedcontainers==2.4.0
-soupsieve==2.6
+requests
+streamlit
+openai
+pandas
+plotly
 st-cytoscape==0.0.5
-stack_data @ file:///home/conda/feedstock_root/build_artifacts/stack_data_1733569443808/work
-streamlit==1.43.1
-sympy==1.13.1
-tenacity==9.0.0
-tokenizers==0.21.0
-toml==0.10.2
-tomli @ file:///opt/conda/conda-bld/tomli_1657175507142/work
-torch==2.6.0+cpu
-torchaudio==2.6.0+cpu
-torchvision==0.21.0+cpu
-tornado==5.0
-tqdm==4.67.1
-traitlets @ file:///home/conda/feedstock_root/build_artifacts/traitlets_1733367359838/work
-transformers==4.49.0
-trio==0.29.0
-trio-websocket==0.12.2
-typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1733188668063/work
-tzdata==2025.1
-unidic-lite==1.0.8
-urllib3==2.3.0
-watchdog==6.0.0
-wcwidth @ file:///home/conda/feedstock_root/build_artifacts/wcwidth_1733231326287/work
-webdriver-manager==4.0.2
-websocket-client==1.8.0
-wsproto==1.2.0
-zipp @ file:///home/conda/feedstock_root/build_artifacts/zipp_1732827521216/work
+jsonschema
+python-dotenv
 
 ```
 
@@ -796,6 +731,121 @@ def render_search_info_selection_section():
 
 ```
 
+### File: streamlit_app/state/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/state/state_manager.py
+
+```python
+# state/state_manager.py
+
+import streamlit as st
+from core.data_models import PaperResult, PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    defaults = {
+        "search_mode": "キーワード検索",
+        "first_user_input": "",
+        "papers": PaperResult(),
+        "user_input_analysis": None,
+        "paper_analysis": None,
+        "num_search_papers": 10,
+        "year_range": (2023, 2025),
+        "search_engine": "semantic scholar",
+        "selected_paper": [],
+        "prev_selected_nodes": [],
+        "chat_history": [{"role": "system", "content": config.system_prompt}],
+        "initial_prompt_processed": True,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+def reset_chat_history():
+    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+    st.session_state["initial_prompt_processed"] = False
+
+def update_selected_paper(selected_paper):
+    st.session_state["selected_paper"] = selected_paper
+    #st.session_state["initial_prompt_processed"] = False
+
+def update_paper_results(papers: PaperResult):
+    st.session_state["papers"] = papers
+
+def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
+    st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
+
+def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
+    st.session_state["num_search_papers"] = num_search_papers
+    st.session_state["year_range"] = year_range
+    st.session_state["search_engine"] = search_engine
+
+```
+
+### File: streamlit_app/state/state_manager_back.py
+
+```python
+# state_manager.py
+import streamlit as st
+#from utils.paper_controller import PaperResult
+from core.data_models import PaperResult
+from utils.llm_controller import PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    # 検索モードと入力値
+    if "search_mode" not in st.session_state:
+        st.session_state["search_mode"] = "キーワード検索"
+    if "first_user_input" not in st.session_state:
+        st.session_state["first_user_input"] = ""
+    
+    # 論文検索結果
+    if "papers" not in st.session_state:
+        st.session_state["papers"] = PaperResult()
+    
+    # ユーザー入力解析結果
+    if "user_input_analysis" not in st.session_state:
+        st.session_state["user_input_analysis"] = None
+
+    # 検索に関するオプション
+    if "num_search_papers" not in st.session_state:
+        st.session_state["num_search_papers"] = 10
+    if "year_range" not in st.session_state:
+        st.session_state["year_range"] = (2023, 2025)
+    if "search_engine" not in st.session_state:
+        st.session_state["search_engine"] = "semantic scholar"
+
+    # ネットワークで選択された論文
+    if "selected_paper" not in st.session_state:
+        st.session_state["selected_paper"] = []
+
+    # 論文表示のための1つ前の論文保存用
+    if "prev_selected_nodes" not in st.session_state:
+        st.session_state["prev_selected_nodes"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+        st.session_state["initial_prompt_processed"] = True
+```
+
 ### File: streamlit_app/utils/__init__.py
 
 ```python
@@ -807,10 +857,23 @@ def render_search_info_selection_section():
 ```python
 # 実験用のmessage　ユーザー論文あり
 import os
+from dotenv import load_dotenv
 from .field_colors import FIELD_LIST, FIELD_NAMES
+
+# .env ファイルがあれば読み込む
+load_dotenv()
+
+def running_in_docker() -> bool:
+    """Docker コンテナ内で実行されているか判定"""
+    return os.path.exists("/.dockerenv")
 
 # デフォルトで使用するOllamaモデル名を環境変数から指定可能にする
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
+# Ollama API の接続先も環境変数で変更可能にする
+default_ollama_url = (
+    "http://host.docker.internal:11435" if running_in_docker() else "http://127.0.0.1:11435"
+)
+OLLAMA_API_BASE_URL = os.environ.get("OLLAMA_API_BASE_URL", default_ollama_url)
 #OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-q8_0")
 _experiment_message_template = '''
 以下は論文の情報です。
@@ -1631,6 +1694,135 @@ if __name__ == "__main__":
     print("abstract:", data.paper[0].abstract)
 ```
 
+### File: streamlit_app/core/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/core/data_models.py
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PaperField:
+    name: str
+    score: float
+
+@dataclass
+class Label:
+    ja: str
+    en: str
+
+@dataclass
+class PaperAnalysisResult:
+    fields: List[PaperField]
+    target: Label
+    title: Optional[str] = None
+    methods: Optional[List[Label]] = None
+    factors: Optional[List[Label]] = None
+    metrics: Optional[List[Label]] = None
+    search_keywords: Optional[List[Label]] = None
+    main_keywords: Optional[List[Label]] = None
+
+@dataclass
+class PaperInfo:
+    title: str
+    abstract: Optional[str]
+    url: str
+    paper_id: str
+    relatedness: Optional[int] = None
+
+@dataclass
+class PaperResult:
+    papers: List[PaperInfo] = field(default_factory=list)
+
+```
+
+### File: streamlit_app/core/llm_service.py
+
+```python
+# core/llm_service.py
+
+from core.data_models import PaperAnalysisResult, PaperField, Label
+from api import ollama_api, lm_studio_api
+from utils import config
+
+def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+```
+
+### File: streamlit_app/core/paper_service.py
+
+```python
+# 論文APIへのアクセスロジック
+# core/paper_service.py
+
+from core.data_models import PaperResult, PaperInfo
+from api.paper_api import search_papers_semantic
+from typing import Tuple
+
+def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
+    year_from, year_to = year_range
+    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+    
+    papers = [
+        PaperInfo(
+            title=paper["title"],
+            abstract=paper.get("abstract"),
+            url=paper["url"],
+            paper_id=paper["paperId"]
+        )
+        for paper in raw_papers
+    ]
+    return PaperResult(papers=papers)
+
+```
+
 ### File: streamlit_app/api/__init__.py
 
 ```python
@@ -1745,7 +1937,7 @@ def get_structured_response(model_name: str, prompt: str, temperature: float = 0
     Ollama の /api/generate エンドポイントを使い、指定したプロンプトで生成を実行します。
     非ストリーミングのため、レスポンス全体を一度に取得して辞書型に変換します。
     """
-    url_generate = "http://127.0.0.1:11435/api/generate"
+    url_generate = f"{config.OLLAMA_API_BASE_URL}/api/generate"
     data = {
         "model": model_name,
         "prompt": prompt,
@@ -1805,7 +1997,7 @@ def get_structured_response_v2(model_name: str, prompt: str, temperature: float 
     Returns:
         dict: 解析済みの構造化されたレスポンス
     """
-    url_chat = "http://127.0.0.1:11435/api/chat"  # エンドポイントをchatに変更
+    url_chat = f"{config.OLLAMA_API_BASE_URL}/api/chat"  # エンドポイントをchatに変更
     payload = {
         "model": model_name,
         "messages": [{"role": "user", "content": prompt}],
@@ -1867,7 +2059,7 @@ def stream_chat_response(model_name: str, messages: list, temperature: float = 0
     Yields:
         response_text (str): 累積された応答テキスト（逐次更新）
     """
-    url_chat = "http://127.0.0.1:11435/api/chat"
+    url_chat = f"{config.OLLAMA_API_BASE_URL}/api/chat"
     data = {
         "model": model_name,
         "messages": messages,
@@ -1999,261 +2191,16 @@ if __name__ == "__main__":
     print(len(data))
 ```
 
-### File: streamlit_app/core/__init__.py
-
-```python
+### File: react_app/frontend/Dockerfile
 
 ```
-
-### File: streamlit_app/core/data_models.py
-
-```python
-from dataclasses import dataclass, field
-from typing import List, Optional
-
-@dataclass
-class PaperField:
-    name: str
-    score: float
-
-@dataclass
-class Label:
-    ja: str
-    en: str
-
-@dataclass
-class PaperAnalysisResult:
-    fields: List[PaperField]
-    target: Label
-    title: Optional[str] = None
-    methods: Optional[List[Label]] = None
-    factors: Optional[List[Label]] = None
-    metrics: Optional[List[Label]] = None
-    search_keywords: Optional[List[Label]] = None
-    main_keywords: Optional[List[Label]] = None
-
-@dataclass
-class PaperInfo:
-    title: str
-    abstract: Optional[str]
-    url: str
-    paper_id: str
-    relatedness: Optional[int] = None
-
-@dataclass
-class PaperResult:
-    papers: List[PaperInfo] = field(default_factory=list)
-
-```
-
-### File: streamlit_app/core/llm_service.py
-
-```python
-# core/llm_service.py
-
-from core.data_models import PaperAnalysisResult, PaperField, Label
-from api import ollama_api, lm_studio_api
-from utils import config
-
-def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-```
-
-### File: streamlit_app/core/paper_service.py
-
-```python
-# 論文APIへのアクセスロジック
-# core/paper_service.py
-
-from core.data_models import PaperResult, PaperInfo
-from api.paper_api import search_papers_semantic
-from typing import Tuple
-
-def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
-    year_from, year_to = year_range
-    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
-    
-    papers = [
-        PaperInfo(
-            title=paper["title"],
-            abstract=paper.get("abstract"),
-            url=paper["url"],
-            paper_id=paper["paperId"]
-        )
-        for paper in raw_papers
-    ]
-    return PaperResult(papers=papers)
-
-```
-
-### File: streamlit_app/state/__init__.py
-
-```python
-
-```
-
-### File: streamlit_app/state/state_manager.py
-
-```python
-# state/state_manager.py
-
-import streamlit as st
-from core.data_models import PaperResult, PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    defaults = {
-        "search_mode": "キーワード検索",
-        "first_user_input": "",
-        "papers": PaperResult(),
-        "user_input_analysis": None,
-        "paper_analysis": None,
-        "num_search_papers": 10,
-        "year_range": (2023, 2025),
-        "search_engine": "semantic scholar",
-        "selected_paper": [],
-        "prev_selected_nodes": [],
-        "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True,
-    }
-
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-def reset_chat_history():
-    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-    st.session_state["initial_prompt_processed"] = False
-
-def update_selected_paper(selected_paper):
-    st.session_state["selected_paper"] = selected_paper
-    #st.session_state["initial_prompt_processed"] = False
-
-def update_paper_results(papers: PaperResult):
-    st.session_state["papers"] = papers
-
-def update_user_input_analysis(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    user_input_analysis
-    に保存
-    """
-    st.session_state["user_input_analysis"] = analysis
-
-def update_user_results(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    paper_analysis
-    に保存
-    """
-    st.session_state["paper_analysis"] = analysis
-
-def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
-    st.session_state["num_search_papers"] = num_search_papers
-    st.session_state["year_range"] = year_range
-    st.session_state["search_engine"] = search_engine
-
-```
-
-### File: streamlit_app/state/state_manager_back.py
-
-```python
-# state_manager.py
-import streamlit as st
-#from utils.paper_controller import PaperResult
-from core.data_models import PaperResult
-from utils.llm_controller import PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    # 検索モードと入力値
-    if "search_mode" not in st.session_state:
-        st.session_state["search_mode"] = "キーワード検索"
-    if "first_user_input" not in st.session_state:
-        st.session_state["first_user_input"] = ""
-    
-    # 論文検索結果
-    if "papers" not in st.session_state:
-        st.session_state["papers"] = PaperResult()
-    
-    # ユーザー入力解析結果
-    if "user_input_analysis" not in st.session_state:
-        st.session_state["user_input_analysis"] = None
-
-    # 検索に関するオプション
-    if "num_search_papers" not in st.session_state:
-        st.session_state["num_search_papers"] = 10
-    if "year_range" not in st.session_state:
-        st.session_state["year_range"] = (2023, 2025)
-    if "search_engine" not in st.session_state:
-        st.session_state["search_engine"] = "semantic scholar"
-
-    # ネットワークで選択された論文
-    if "selected_paper" not in st.session_state:
-        st.session_state["selected_paper"] = []
-
-    # 論文表示のための1つ前の論文保存用
-    if "prev_selected_nodes" not in st.session_state:
-        st.session_state["prev_selected_nodes"] = []
-
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-        st.session_state["initial_prompt_processed"] = True
-```
-
-### File: new_repo/AGENTS.md
-
-```markdown
-# AGENTS for new_repo
-
-このディレクトリでは、React(TypeScript)フロントエンドとPythonバックエンドへの移行計画を管理します。
-
-## ガイドライン
-- ドキュメントや設定ファイルのみを配置し、アプリケーションコードは含めないこと。
-- バックエンドは FastAPI を想定していますが、検討段階のため確定ではありません。
-- 新しいリポジトリ作成時に、このディレクトリ内のファイルをコピーして使用します。
+FROM node:18
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . /app
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]
 
 ```
 
@@ -2270,6 +2217,19 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <App />
   </React.StrictMode>
 );
+
+```
+
+### File: react_app/backend/Dockerfile
+
+```
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ```
 

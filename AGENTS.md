@@ -6,22 +6,23 @@
 paper_search/
 ├── AGENTS.md
 ├── README.md
+├── docker-compose.yml
 ├── pulling_files.py
 ├── project_export.md
-├── new_repo
-│   ├── AGENTS.md
-│   └── README.md
 ├── react_app
 │   ├── backend
+│   │   ├── Dockerfile
 │   │   ├── README.md
 │   │   ├── main.py
 │   │   └── requirements.txt
 │   └── frontend
+│       ├── Dockerfile
 │       ├── README.md
 │       ├── package.json
 │       └── src
 │           └── main.tsx
 └── streamlit_app
+    ├── Dockerfile
     ├── api
     │   ├── lm_studio_api.py
     │   ├── ollama_api.py
