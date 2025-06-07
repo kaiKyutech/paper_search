@@ -8,4 +8,8 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Ollama API のエンドポイントは環境変数 `OLLAMA_API_BASE_URL` で指定できます。Docker で実行する場合は `http://host.docker.internal:11435` が自動で設定され、ローカル実行時は `http://127.0.0.1:11435` が既定値となります。
+Ollama API への接続先は実行環境から自動で判定されます。
+Docker コンテナ内では `http://host.docker.internal:11435`、
+ローカル実行時は `http://127.0.0.1:11435` が既定値です。
+別のエンドポイントを利用したい場合のみ
+環境変数 `OLLAMA_API_BASE_URL` を設定してください。
