@@ -14,21 +14,34 @@
   QAT 版が公開されていればそちらを利用するのも良いでしょう。  
 
 ## セットアップ
-1. 依存パッケージをインストールします。
+
+### Docker を利用する場合（推奨）
+1. リポジトリ直下で以下を実行し、必要なサービスを起動します。
+   ```bash
+   # すべてのサービスを起動する例
+   docker-compose up
+   ```
+   それぞれ個別に起動したい場合はサービス名を指定してください。
+   - Streamlit アプリのみ: `docker-compose up streamlit`
+   - React フロントエンド + FastAPI バックエンド: `docker-compose up frontend backend`
+
+2. 停止する際は `Ctrl+C` で終了後に `docker-compose down` を実行します。
+
+### Docker を使わない場合（参考）
+1. Python 3.10 以上の環境を用意し、依存パッケージをインストールします。
    ```bash
    pip install -r streamlit_app/requirements.txt
    ```
-2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。
-   未設定の場合は `gemma-textonly_v3:latest` が使用されます。 
-
-   モデルの対応は以下です。（複雑ですまん、いつか整理する） 
-   - 解説AI : gemma3:12b(Q4)  
-   - 解析AI : gemma3:12b(Q3 テキストだけを抜き出したモデルなので、モデル名を`gemma-textonly_v3:latest`に変更してあります。)
+   `streamlit_app/requirements.txt` は Anaconda 環境から生成したため、
+   一部のパッケージはバージョン指定が無かったり OS 依存のライブラリが必要になる
+   場合があります。`pip install` で失敗する場合は該当パッケージを個別に
+   インストールしてください。
+2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。未設定の場合は
+   `gemma-textonly_v3:latest` が使用されます。
 3. 以下のコマンドでアプリを起動します。
    ```bash
    streamlit run streamlit_app/app.py
    ```
-4. ブラウザに表示される画面から検索を行ってください。
 
 ## 今後追加したい機能とそれに対する展望
 - 既に解析した論文を保存しておく機能。
