@@ -34,3 +34,24 @@
 - 既に解析した論文を保存しておく機能。
 - 使用するモデルを動的に変更できる機能。これは解析AIと解説AIは別として登録できるようにすること。デフォルトまで指定できるといい。
 - reactなどに環境移行。UIを見やすくする。
+
+## Docker Compose を利用した起動方法
+
+このリポジトリには Streamlit アプリ、React フロントエンド、FastAPI バックエンド
+の3サービスが含まれています。`docker-compose` コマンドで起動したいサービスだけ
+を選択できます。
+
+### Streamlit アプリのみを起動
+```bash
+docker-compose up streamlit
+```
+
+### React と FastAPI を起動
+```bash
+docker-compose up frontend backend
+```
+
+### すべてのサービスを同時に起動
+```bash
+docker-compose up
+```
