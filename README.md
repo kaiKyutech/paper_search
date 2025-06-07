@@ -44,3 +44,23 @@ React フロントエンドと FastAPI バックエンドの開発を開始し�
 - `react_app/frontend/` React アプリケーション
 - `react_app/backend/` FastAPI アプリケーション
 
+
+## Docker Compose での起動方法
+Docker 環境が利用できる場合は、`docker-compose` で各アプリケーションを簡単に起動できます。
+
+### Streamlit アプリのみ起動
+```bash
+docker-compose up streamlit
+```
+
+### React フロントエンド + FastAPI バックエンドを起動
+```bash
+docker-compose up frontend backend
+```
+
+### すべてのサービスを起動
+```bash
+docker-compose up
+```
+
+停止する場合は `Ctrl+C` で終了後、`docker-compose down` を実行してください。

@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  streamlit:
+    build:
+      context: ./streamlit_app
+    ports:
+      - "8501:8501"
+    container_name: streamlit_app
+  backend:
+    build:
+      context: ./react_app/backend
+    ports:
+      - "8000:8000"
+    container_name: fastapi_backend
+  frontend:
+    build:
+      context: ./react_app/frontend
+    ports:
+      - "5173:5173"
+    container_name: react_frontend
+    depends_on:
+      - backend
