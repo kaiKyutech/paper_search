@@ -16,7 +16,7 @@
 ## セットアップ
 1. 依存パッケージをインストールします。
    ```bash
-   pip install -r requirements.txt
+   pip install -r streamlit_app/requirements.txt
    ```
 2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。
    未設定の場合は `gemma-textonly_v3:latest` が使用されます。 
@@ -26,11 +26,21 @@
    - 解析AI : gemma3:12b(Q3 テキストだけを抜き出したモデルなので、モデル名を`gemma-textonly_v3:latest`に変更してあります。)
 3. 以下のコマンドでアプリを起動します。
    ```bash
-   streamlit run app.py
+   streamlit run streamlit_app/app.py
    ```
 4. ブラウザに表示される画面から検索を行ってください。
 
 ## 今後追加したい機能とそれに対する展望
 - 既に解析した論文を保存しておく機能。
 - 使用するモデルを動的に変更できる機能。これは解析AIと解説AIは別として登録できるようにすること。デフォルトまで指定できるといい。
-- reactなどに環境移行。UIを見やすくする。
+- React などに環境移行し、UI を見やすくする。
+
+## 新構成
+React フロントエンドと FastAPI バックエンドの開発を開始しました。
+既存の Streamlit アプリは `streamlit_app` ディレクトリで従来通り動作します。
+新しいディレクトリ構成は以下の通りです。
+
+- `streamlit_app/` Streamlit 版アプリケーション
+- `react_app/frontend/` React アプリケーション
+- `react_app/backend/` FastAPI アプリケーション
+
