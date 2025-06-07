@@ -8,10 +8,16 @@ paper_search/
 │   ├── ollama_api.py
 │   └── paper_api.py
 ├── app.py
+├── backend
+│   ├── main.py
+│   └── requirements.txt
 ├── core
 │   ├── data_models.py
 │   ├── llm_service.py
 │   └── paper_service.py
+├── frontend
+│   └── src
+│       └── main.tsx
 ├── new_repo
 │   └── AGENTS.md
 ├── requirements.txt
@@ -44,11 +50,20 @@ paper_search/
 │   ├── lm_studio_api.py
 │   ├── ollama_api.py
 │   └── paper_api.py
+├── backend
+│   ├── README.md
+│   ├── main.py
+│   └── requirements.txt
 ├── app.py
 ├── core
 │   ├── data_models.py
 │   ├── llm_service.py
 │   └── paper_service.py
+├── frontend
+│   ├── README.md
+│   ├── package.json
+│   └── src
+│       └── main.tsx
 ├── new_repo
 │   ├── AGENTS.md
 │   └── README.md
@@ -1240,129 +1255,6 @@ if __name__ == "__main__":
     print("abstract:", data.paper[0].abstract)
 ```
 
-### File: new_repo/AGENTS.md
-
-```markdown
-# AGENTS for new_repo
-
-このディレクトリでは、React(TypeScript)フロントエンドとPythonバックエンドへの移行計画を管理します。
-
-## ガイドライン
-- ドキュメントや設定ファイルのみを配置し、アプリケーションコードは含めないこと。
-- バックエンドは FastAPI を想定していますが、検討段階のため確定ではありません。
-- 新しいリポジトリ作成時に、このディレクトリ内のファイルをコピーして使用します。
-
-```
-
-### File: state/state_manager.py
-
-```python
-# state/state_manager.py
-
-import streamlit as st
-from core.data_models import PaperResult, PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    defaults = {
-        "search_mode": "キーワード検索",
-        "first_user_input": "",
-        "papers": PaperResult(),
-        "user_input_analysis": None,
-        "paper_analysis": None,
-        "num_search_papers": 10,
-        "year_range": (2023, 2025),
-        "search_engine": "semantic scholar",
-        "selected_paper": [],
-        "prev_selected_nodes": [],
-        "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True,
-    }
-
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-def reset_chat_history():
-    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-    st.session_state["initial_prompt_processed"] = False
-
-def update_selected_paper(selected_paper):
-    st.session_state["selected_paper"] = selected_paper
-    #st.session_state["initial_prompt_processed"] = False
-
-def update_paper_results(papers: PaperResult):
-    st.session_state["papers"] = papers
-
-def update_user_input_analysis(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    user_input_analysis
-    に保存
-    """
-    st.session_state["user_input_analysis"] = analysis
-
-def update_user_results(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    paper_analysis
-    に保存
-    """
-    st.session_state["paper_analysis"] = analysis
-
-def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
-    st.session_state["num_search_papers"] = num_search_papers
-    st.session_state["year_range"] = year_range
-    st.session_state["search_engine"] = search_engine
-
-```
-
-### File: state/state_manager_back.py
-
-```python
-# state_manager.py
-import streamlit as st
-#from utils.paper_controller import PaperResult
-from core.data_models import PaperResult
-from utils.llm_controller import PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    # 検索モードと入力値
-    if "search_mode" not in st.session_state:
-        st.session_state["search_mode"] = "キーワード検索"
-    if "first_user_input" not in st.session_state:
-        st.session_state["first_user_input"] = ""
-    
-    # 論文検索結果
-    if "papers" not in st.session_state:
-        st.session_state["papers"] = PaperResult()
-    
-    # ユーザー入力解析結果
-    if "user_input_analysis" not in st.session_state:
-        st.session_state["user_input_analysis"] = None
-
-    # 検索に関するオプション
-    if "num_search_papers" not in st.session_state:
-        st.session_state["num_search_papers"] = 10
-    if "year_range" not in st.session_state:
-        st.session_state["year_range"] = (2023, 2025)
-    if "search_engine" not in st.session_state:
-        st.session_state["search_engine"] = "semantic scholar"
-
-    # ネットワークで選択された論文
-    if "selected_paper" not in st.session_state:
-        st.session_state["selected_paper"] = []
-
-    # 論文表示のための1つ前の論文保存用
-    if "prev_selected_nodes" not in st.session_state:
-        st.session_state["prev_selected_nodes"] = []
-
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-        st.session_state["initial_prompt_processed"] = True
-```
-
 ### File: ui/chat_panel.py
 
 ```python
@@ -1704,6 +1596,129 @@ def render_search_info_selection_section():
                 key="search_engine",
             )
 
+
+```
+
+### File: core/data_models.py
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PaperField:
+    name: str
+    score: float
+
+@dataclass
+class Label:
+    ja: str
+    en: str
+
+@dataclass
+class PaperAnalysisResult:
+    fields: List[PaperField]
+    target: Label
+    title: Optional[str] = None
+    methods: Optional[List[Label]] = None
+    factors: Optional[List[Label]] = None
+    metrics: Optional[List[Label]] = None
+    search_keywords: Optional[List[Label]] = None
+    main_keywords: Optional[List[Label]] = None
+
+@dataclass
+class PaperInfo:
+    title: str
+    abstract: Optional[str]
+    url: str
+    paper_id: str
+    relatedness: Optional[int] = None
+
+@dataclass
+class PaperResult:
+    papers: List[PaperInfo] = field(default_factory=list)
+
+```
+
+### File: core/llm_service.py
+
+```python
+# core/llm_service.py
+
+from core.data_models import PaperAnalysisResult, PaperField, Label
+from api import ollama_api, lm_studio_api
+from utils import config
+
+def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+```
+
+### File: core/paper_service.py
+
+```python
+# 論文APIへのアクセスロジック
+# core/paper_service.py
+
+from core.data_models import PaperResult, PaperInfo
+from api.paper_api import search_papers_semantic
+from typing import Tuple
+
+def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
+    year_from, year_to = year_range
+    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+    
+    papers = [
+        PaperInfo(
+            title=paper["title"],
+            abstract=paper.get("abstract"),
+            url=paper["url"],
+            paper_id=paper["paperId"]
+        )
+        for paper in raw_papers
+    ]
+    return PaperResult(papers=papers)
 
 ```
 
@@ -2069,126 +2084,174 @@ if __name__ == "__main__":
     print(len(data))
 ```
 
-### File: core/data_models.py
+### File: backend/main.py
 
 ```python
-from dataclasses import dataclass, field
-from typing import List, Optional
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-@dataclass
-class PaperField:
-    name: str
-    score: float
+app = FastAPI()
 
-@dataclass
-class Label:
-    ja: str
-    en: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@dataclass
-class PaperAnalysisResult:
-    fields: List[PaperField]
-    target: Label
-    title: Optional[str] = None
-    methods: Optional[List[Label]] = None
-    factors: Optional[List[Label]] = None
-    metrics: Optional[List[Label]] = None
-    search_keywords: Optional[List[Label]] = None
-    main_keywords: Optional[List[Label]] = None
+@app.get("/health")
+async def health_check():
+    """ヘルスチェック用エンドポイント"""
+    return {"status": "ok"}
 
-@dataclass
-class PaperInfo:
-    title: str
-    abstract: Optional[str]
-    url: str
-    paper_id: str
-    relatedness: Optional[int] = None
-
-@dataclass
-class PaperResult:
-    papers: List[PaperInfo] = field(default_factory=list)
 
 ```
 
-### File: core/llm_service.py
+### File: backend/requirements.txt
+
+```
+fastapi
+uvicorn
+
+```
+
+### File: frontend/src/main.tsx
+
+```
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+
+const App = () => <div>Paper Search Frontend</div>;
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+```
+
+### File: state/state_manager.py
 
 ```python
-# core/llm_service.py
+# state/state_manager.py
 
-from core.data_models import PaperAnalysisResult, PaperField, Label
-from api import ollama_api, lm_studio_api
+import streamlit as st
+from core.data_models import PaperResult, PaperAnalysisResult
 from utils import config
 
-def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
+def initialize_session_state():
+    defaults = {
+        "search_mode": "キーワード検索",
+        "first_user_input": "",
+        "papers": PaperResult(),
+        "user_input_analysis": None,
+        "paper_analysis": None,
+        "num_search_papers": 10,
+        "year_range": (2023, 2025),
+        "search_engine": "semantic scholar",
+        "selected_paper": [],
+        "prev_selected_nodes": [],
+        "chat_history": [{"role": "system", "content": config.system_prompt}],
+        "initial_prompt_processed": True,
+    }
 
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
-def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
+def reset_chat_history():
+    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+    st.session_state["initial_prompt_processed"] = False
 
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
+def update_selected_paper(selected_paper):
+    st.session_state["selected_paper"] = selected_paper
+    #st.session_state["initial_prompt_processed"] = False
+
+def update_paper_results(papers: PaperResult):
+    st.session_state["papers"] = papers
+
+def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
+    st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
+
+def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
+    st.session_state["num_search_papers"] = num_search_papers
+    st.session_state["year_range"] = year_range
+    st.session_state["search_engine"] = search_engine
 
 ```
 
-### File: core/paper_service.py
+### File: state/state_manager_back.py
 
 ```python
-# 論文APIへのアクセスロジック
-# core/paper_service.py
+# state_manager.py
+import streamlit as st
+#from utils.paper_controller import PaperResult
+from core.data_models import PaperResult
+from utils.llm_controller import PaperAnalysisResult
+from utils import config
 
-from core.data_models import PaperResult, PaperInfo
-from api.paper_api import search_papers_semantic
-from typing import Tuple
-
-def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
-    year_from, year_to = year_range
-    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+def initialize_session_state():
+    # 検索モードと入力値
+    if "search_mode" not in st.session_state:
+        st.session_state["search_mode"] = "キーワード検索"
+    if "first_user_input" not in st.session_state:
+        st.session_state["first_user_input"] = ""
     
-    papers = [
-        PaperInfo(
-            title=paper["title"],
-            abstract=paper.get("abstract"),
-            url=paper["url"],
-            paper_id=paper["paperId"]
-        )
-        for paper in raw_papers
-    ]
-    return PaperResult(papers=papers)
+    # 論文検索結果
+    if "papers" not in st.session_state:
+        st.session_state["papers"] = PaperResult()
+    
+    # ユーザー入力解析結果
+    if "user_input_analysis" not in st.session_state:
+        st.session_state["user_input_analysis"] = None
+
+    # 検索に関するオプション
+    if "num_search_papers" not in st.session_state:
+        st.session_state["num_search_papers"] = 10
+    if "year_range" not in st.session_state:
+        st.session_state["year_range"] = (2023, 2025)
+    if "search_engine" not in st.session_state:
+        st.session_state["search_engine"] = "semantic scholar"
+
+    # ネットワークで選択された論文
+    if "selected_paper" not in st.session_state:
+        st.session_state["selected_paper"] = []
+
+    # 論文表示のための1つ前の論文保存用
+    if "prev_selected_nodes" not in st.session_state:
+        st.session_state["prev_selected_nodes"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+        st.session_state["initial_prompt_processed"] = True
+```
+
+### File: new_repo/AGENTS.md
+
+```markdown
+# AGENTS for new_repo
+
+このディレクトリでは、React(TypeScript)フロントエンドとPythonバックエンドへの移行計画を管理します。
+
+## ガイドライン
+- ドキュメントや設定ファイルのみを配置し、アプリケーションコードは含めないこと。
+- バックエンドは FastAPI を想定していますが、検討段階のため確定ではありません。
+- 新しいリポジトリ作成時に、このディレクトリ内のファイルをコピーして使用します。
 
 ```
 

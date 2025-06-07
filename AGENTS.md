@@ -8,11 +8,20 @@ paper_search/
 │   ├── lm_studio_api.py
 │   ├── ollama_api.py
 │   └── paper_api.py
+├── backend
+│   ├── README.md
+│   ├── main.py
+│   └── requirements.txt
 ├── app.py
 ├── core
 │   ├── data_models.py
 │   ├── llm_service.py
 │   └── paper_service.py
+├── frontend
+│   ├── README.md
+│   ├── package.json
+│   └── src
+│       └── main.tsx
 ├── new_repo
 │   ├── AGENTS.md
 │   └── README.md
