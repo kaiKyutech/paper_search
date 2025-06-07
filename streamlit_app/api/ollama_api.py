@@ -8,7 +8,7 @@ def get_structured_response(model_name: str, prompt: str, temperature: float = 0
     Ollama の /api/generate エンドポイントを使い、指定したプロンプトで生成を実行します。
     非ストリーミングのため、レスポンス全体を一度に取得して辞書型に変換します。
     """
-    url_generate = "http://127.0.0.1:11435/api/generate"
+    url_generate = f"{config.OLLAMA_API_BASE_URL}/api/generate"
     data = {
         "model": model_name,
         "prompt": prompt,
@@ -68,7 +68,7 @@ def get_structured_response_v2(model_name: str, prompt: str, temperature: float 
     Returns:
         dict: 解析済みの構造化されたレスポンス
     """
-    url_chat = "http://127.0.0.1:11435/api/chat"  # エンドポイントをchatに変更
+    url_chat = f"{config.OLLAMA_API_BASE_URL}/api/chat"  # エンドポイントをchatに変更
     payload = {
         "model": model_name,
         "messages": [{"role": "user", "content": prompt}],
@@ -130,7 +130,7 @@ def stream_chat_response(model_name: str, messages: list, temperature: float = 0
     Yields:
         response_text (str): 累積された応答テキスト（逐次更新）
     """
-    url_chat = "http://127.0.0.1:11435/api/chat"
+    url_chat = f"{config.OLLAMA_API_BASE_URL}/api/chat"
     data = {
         "model": model_name,
         "messages": messages,

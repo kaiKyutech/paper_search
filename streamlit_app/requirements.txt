@@ -5,3 +5,4 @@ pandas
 plotly
 st-cytoscape==0.0.5
 jsonschema
+python-dotenv

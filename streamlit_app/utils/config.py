@@ -1,9 +1,17 @@
 # 実験用のmessage　ユーザー論文あり
 import os
+from dotenv import load_dotenv
 from .field_colors import FIELD_LIST, FIELD_NAMES
+
+# .env ファイルがあれば読み込む
+load_dotenv()
 
 # デフォルトで使用するOllamaモデル名を環境変数から指定可能にする
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
+# Ollama API の接続先も環境変数で変更可能にする
+OLLAMA_API_BASE_URL = os.environ.get(
+    "OLLAMA_API_BASE_URL", "http://127.0.0.1:11434"
+)
 #OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-q8_0")
 _experiment_message_template = '''
 以下は論文の情報です。

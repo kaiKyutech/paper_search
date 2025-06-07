@@ -36,10 +36,22 @@
    しています。`pip install` で不足がある場合は適宜追加してください。
 2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。未設定の場合は
    `gemma-textonly_v3:latest` が使用されます。
-3. 以下のコマンドでアプリを起動します。
+3. Ollama API の接続先を変更したい場合は環境変数 `OLLAMA_API_BASE_URL`
+   を設定します。デフォルトは `http://127.0.0.1:11434` です。
+4. 以下のコマンドでアプリを起動します。
    ```bash
    streamlit run streamlit_app/app.py
    ```
+
+### Ollama API 接続先の変更例
+`.env` ファイルに以下のように記述すると、API エンドポイントを簡単に切り替えられます。
+
+```env
+OLLAMA_API_BASE_URL=http://host.docker.internal:11434
+```
+
+Docker 起動時は上記の値が自動で設定されています。ネイティブ環境で起動する場合は
+`http://127.0.0.1:11434` など実際の Ollama のホストを指定してください。
 
 ## 今後追加したい機能とそれに対する展望
 - 既に解析した論文を保存しておく機能。
