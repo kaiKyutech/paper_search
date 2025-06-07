@@ -32,10 +32,8 @@
    ```bash
    pip install -r streamlit_app/requirements.txt
    ```
-   `streamlit_app/requirements.txt` は Anaconda 環境から生成したため、
-   一部のパッケージはバージョン指定が無かったり OS 依存のライブラリが必要になる
-   場合があります。`pip install` で失敗する場合は該当パッケージを個別に
-   インストールしてください。
+   `streamlit_app/requirements.txt` は Docker 用に最小限の依存のみを列挙
+   しています。`pip install` で不足がある場合は適宜追加してください。
 2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。未設定の場合は
    `gemma-textonly_v3:latest` が使用されます。
 3. 以下のコマンドでアプリを起動します。
