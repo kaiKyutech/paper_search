@@ -23,6 +23,7 @@ paper_search/
 │           └── main.tsx
 └── streamlit_app
     ├── Dockerfile
+    ├── README.md
     ├── api
     │   ├── lm_studio_api.py
     │   ├── ollama_api.py

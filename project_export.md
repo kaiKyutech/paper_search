@@ -75,6 +75,7 @@ paper_search/
 │           └── main.tsx
 └── streamlit_app
     ├── Dockerfile
+    ├── README.md
     ├── api
     │   ├── lm_studio_api.py
     │   ├── ollama_api.py
@@ -130,8 +131,6 @@ services:
     ports:
       - "8501:8501"
     container_name: streamlit_app
-    environment:
-      - OLLAMA_API_BASE_URL=http://host.docker.internal:11435
     extra_hosts:
       - host.docker.internal:host-gateway
   backend:
@@ -158,7 +157,6 @@ FROM python:3.10-slim
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-ENV OLLAMA_API_BASE_URL=http://host.docker.internal:11435
 COPY . /app
 EXPOSE 8501
 CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
@@ -378,6 +376,135 @@ plotly
 st-cytoscape==0.0.5
 jsonschema
 python-dotenv
+
+```
+
+### File: streamlit_app/core/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/core/data_models.py
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PaperField:
+    name: str
+    score: float
+
+@dataclass
+class Label:
+    ja: str
+    en: str
+
+@dataclass
+class PaperAnalysisResult:
+    fields: List[PaperField]
+    target: Label
+    title: Optional[str] = None
+    methods: Optional[List[Label]] = None
+    factors: Optional[List[Label]] = None
+    metrics: Optional[List[Label]] = None
+    search_keywords: Optional[List[Label]] = None
+    main_keywords: Optional[List[Label]] = None
+
+@dataclass
+class PaperInfo:
+    title: str
+    abstract: Optional[str]
+    url: str
+    paper_id: str
+    relatedness: Optional[int] = None
+
+@dataclass
+class PaperResult:
+    papers: List[PaperInfo] = field(default_factory=list)
+
+```
+
+### File: streamlit_app/core/llm_service.py
+
+```python
+# core/llm_service.py
+
+from core.data_models import PaperAnalysisResult, PaperField, Label
+from api import ollama_api, lm_studio_api
+from utils import config
+
+def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+```
+
+### File: streamlit_app/core/paper_service.py
+
+```python
+# 論文APIへのアクセスロジック
+# core/paper_service.py
+
+from core.data_models import PaperResult, PaperInfo
+from api.paper_api import search_papers_semantic
+from typing import Tuple
+
+def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
+    year_from, year_to = year_range
+    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+    
+    papers = [
+        PaperInfo(
+            title=paper["title"],
+            abstract=paper.get("abstract"),
+            url=paper["url"],
+            paper_id=paper["paperId"]
+        )
+        for paper in raw_papers
+    ]
+    return PaperResult(papers=papers)
 
 ```
 
@@ -731,119 +858,372 @@ def render_search_info_selection_section():
 
 ```
 
-### File: streamlit_app/state/__init__.py
+### File: streamlit_app/api/__init__.py
 
 ```python
 
 ```
 
-### File: streamlit_app/state/state_manager.py
+### File: streamlit_app/api/lm_studio_api.py
 
 ```python
-# state/state_manager.py
-
-import streamlit as st
-from core.data_models import PaperResult, PaperAnalysisResult
+import json
+from openai import OpenAI
 from utils import config
 
-def initialize_session_state():
-    defaults = {
-        "search_mode": "キーワード検索",
-        "first_user_input": "",
-        "papers": PaperResult(),
-        "user_input_analysis": None,
-        "paper_analysis": None,
-        "num_search_papers": 10,
-        "year_range": (2023, 2025),
-        "search_engine": "semantic scholar",
-        "selected_paper": [],
-        "prev_selected_nodes": [],
-        "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True,
+def get_structured_response(client: OpenAI, model: str, messages: list) -> dict:
+    """
+    lm studio jsonスキーマ固定出力
+    指定したモデルとメッセージでチャット補完を実行し、
+    返ってきたJSON形式のレスポンスを辞書型に変換して返す関数。
+    
+    Parameters:
+        client (OpenAI): OpenAIクライアントインスタンス
+        model (str): 使用するモデル名
+        messages (list): チャットで送信するメッセージのリスト
+    
+    Returns:
+        dict: 整形されたレスポンス（例: fields, labels など）
+    
+    Raises:
+        ValueError: JSONのパースに失敗した場合
+    """
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        # 必要に応じて追加パラメータを設定
+    )
+    
+
+    # message.content全体を取得
+    result = response.choices[0].message.content
+    clean_lines = [line for line in result.splitlines() if not line.strip().startswith("```")]
+    result = "\n".join(clean_lines)
+    #print(result)
+
+
+    try:
+        structured_data = json.loads(result)
+    except json.JSONDecodeError as e:
+        print(result)
+        raise ValueError("レスポンスのJSON形式に誤りがあります") from e
+
+    return structured_data
+
+def stream_chat_response(messages, temperature=0.2):
+    """
+    APIを呼び出してストリーミング応答を生成するジェネレーター関数
+    """
+    # システムプロンプトやAPI設定
+    system_prompt = "あなたは誠実で優秀な日本人のアシスタントです。特に指示が無い場合は、常に日本語で回答してください。"
+    url1 = "http://192.168.11.26:1234/v1"
+    client = OpenAI(base_url=url1, api_key="lm-studio")
+    MODEL = "my-model"
+    stream = client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        stream=True,
+        #temperature=temperature
+    )
+    response_text = ""
+    for chunk in stream:
+        delta = chunk.choices[0].delta
+        if delta.content:
+            response_text += delta.content
+            yield response_text
+
+
+# 使用例
+if __name__ == "__main__":
+    client = OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm-studio")
+    #client = OpenAI(base_url="http://localhost:11435/v1", api_key="gemma3:12b")
+    
+    #MODEL = "gemma3:12b"
+    MODEL = "my-model"
+    #MODEL = "gemma-3-12b-it@q3_k_l"
+    user_paper = '''"""感度解析を介した時系列遺伝子発現データ補完法の開発と創薬応用,承認薬を含む生物活性化合物は治療標的となるタンパク質に作用することで疾患治療のための作用を示す。しか し、それ以外のタンパク質に作用することで副作用のような期待していない作用を示す場合がある。したがって、 化合物の作用メカニズムを明らかにすることは、創薬における重要課題になっている。近年、オミクス情報に基づく、化合物の作用メカニズム予測が注目されている。例えば、化合物をヒト由来細胞に 添加して、一定時間後に遺伝子発現を観測した、化合物応答遺伝子発現データは、化合物の作用メカニズムの予測 に用いられている。しかしながら、このような遺伝子発現データは、コストや時間の制約により、特定の時間点で のみ観測され時系列で観測されていない。これによって、特定の時間点での解析を行うことはできるが、経時的に 解析を行うことができない。したがって、現状のデータから、化合物の経時的な影響を予測することは限界がある。そこで本研究では、細胞内システムに対して構築された数理モデルの感度解析を行い、得られた結果に基づき、 観測されている化合物応答遺伝子発現データから、時系列の遺伝子発現データを補完する新たな手法を開発することを目指した。"""'''
+    user_paper = '''"""多次元センサデータ処理のためのTransformerを用いた自己教師あり学習手法,センサ信号を入力として,人間行動認識を行う深層学習アルゴリズムを開発した. ここでは自然言語で用いられるTransformerに基づいた事前学習言語モデルを構築して, その事前学習言語モデルを用いて,下流タスクである人間行動認識タスクを解く形を追求する. VanillaのTransformerでもこれは可能であるが, ここでは, 線形層によるn次元数値データの埋め込み、ビン化処理、出力層の線形処理層という３つの要素を特色とするｎ次元数値処理トランスフォーマーを提案する。5種類のデータセットに対して、このモデルの効果を確かめた. VanillaのTransformerと比較して, 精度で10%～15%程度, 向上させることができた"""'''
+    #user_paper = '''"""P2LHAP: Wearable-Sensor-Based Human Activity Recognition, Segmentation, and Forecast Through Patch-to-Label Seq2Seq Transformer Traditional deep learning methods struggle to simultaneously segment, recognize, and forecast human activities from sensor data. This limits their usefulness in many fields, such as healthcare and assisted living, where real-time understanding of ongoing and upcoming activities is crucial. This article introduces P2LHAP, a novel Patch-to-Label Seq2Seq framework that tackles all three tasks in an efficient single-task model. P2LHAP divides sensor data streams into a sequence of “patches,” served as input tokens, and outputs a sequence of patch-level activity labels, including the predicted future activities. A unique smoothing technique based on surrounding patch labels, is proposed to identify activity boundaries accurately. Additionally, P2LHAP learns patch-level representation by sensor signal channel-independent Transformer encoders and decoders. All channels share embedding and Transformer weights across all sequences. Evaluated on the three public datasets, P2LHAP significantly outperforms the state-of-the-art in all three tasks, demonstrating its effectiveness and potential for real-world applications."""'''
+    messages = [
+        {
+            "role": "user",
+            "content": config.experiment_message_without_paper + user_paper
+        }
+    ]
+    
+    data = get_structured_response(client, MODEL, messages)
+    print(data)
+    print(data.keys())
+    #for item in data['fields']:
+    #    print(f"{item['name']}:{item['score']}")
+
+```
+
+### File: streamlit_app/api/ollama_api.py
+
+```python
+import requests
+import json
+from utils import config
+from jsonschema import validate, ValidationError
+
+def get_structured_response(model_name: str, prompt: str, temperature: float = 0.8, max_tokens: int = 500) -> dict:
+    """
+    Ollama の /api/generate エンドポイントを使い、指定したプロンプトで生成を実行します。
+    非ストリーミングのため、レスポンス全体を一度に取得して辞書型に変換します。
+    """
+    url_generate = config.OLLAMA_GENERATE_URL
+    data = {
+        "model": model_name,
+        "prompt": prompt,
+        "stream": False,
+        "temperature": temperature,
+        #"max_tokens": max_tokens
     }
+    response = requests.post(url_generate, json=data)
+    if response.status_code != 200:
+        raise Exception(f"Error: {response.status_code}")
+    
+    result = response.text
+    # 不要なマークダウン（例: ```）が含まれている場合は除去
+    clean_lines = [line for line in result.splitlines() if not line.strip().startswith("```")]
+    clean_result = "\n".join(clean_lines)
+    
+    try:
+        structured_data = json.loads(clean_result)
+    except json.JSONDecodeError as e:
+        raise ValueError("レスポンスのJSON形式に誤りがあります.1") from e
+    
+    # 不要なマークダウン（例: ```）が含まれている場合は除去
+    clean_lines = [line for line in structured_data["response"].splitlines() if not line.strip().startswith("```")]
+    clean_result = "\n".join(clean_lines)
 
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+    try:
+        structured_data = json.loads(clean_result)
+    except json.JSONDecodeError as e:
+        print(clean_result)
+        raise ValueError("レスポンスのJSON形式に誤りがあります.2") from e
 
-def reset_chat_history():
-    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-    st.session_state["initial_prompt_processed"] = False
+    return structured_data
 
-def update_selected_paper(selected_paper):
-    st.session_state["selected_paper"] = selected_paper
-    #st.session_state["initial_prompt_processed"] = False
-
-def update_paper_results(papers: PaperResult):
-    st.session_state["papers"] = papers
-
-def update_user_input_analysis(analysis: PaperAnalysisResult):
+def get_structured_response_v2(model_name: str, prompt: str, temperature: float = 0.8, max_tokens: int = 500, json_schema: dict = config.structured_json_schema) -> dict:
     """
-    analysis情報を
-    user_input_analysis
-    に保存
+    Structured output機能を利用して、JSONスキーマに沿ったレスポンスを取得する改良版関数です。
+    
+    Parameters:
+        model_name (str): 使用するモデル名
+        prompt (str): ユーザーのプロンプト
+        temperature (float): 出力の多様性を制御するパラメータ
+        max_tokens (int): 最大トークン数（必要に応じて利用）
+        json_schema (dict): JSONスキーマを指定する場合に渡す。例:
+            {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "capital": { "type": "string" },
+                "languages": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "required": ["name", "capital", "languages"]
+            }
+    
+    Returns:
+        dict: 解析済みの構造化されたレスポンス
     """
-    st.session_state["user_input_analysis"] = analysis
+    url_chat = config.OLLAMA_CHAT_URL  # エンドポイントをchatに変更
+    payload = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "temperature": temperature,
+    }
+    if json_schema:
+        payload["format"] = json_schema
 
-def update_user_results(analysis: PaperAnalysisResult):
+    response = requests.post(url_chat, json=payload)
+    if response.status_code != 200:
+        raise Exception(f"Error: {response.status_code}")
+    
+    result = response.text
+    
+    
+    try:
+        structured_data = json.loads(result)
+        print("\n\n",structured_data)
+    except json.JSONDecodeError as e:
+        raise ValueError("レスポンスのJSON形式に誤りがあります") from e
+    
+    try:
+        content = structured_data["message"]["content"]
+    except (KeyError, TypeError):
+        raise ValueError("レスポンス形式が想定と異なります")
+    
+    clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
+    clean_result = "\n".join(clean_lines)
+    
+    try:
+        structured_data = json.loads(clean_result)
+        print("\n\n", structured_data)
+    except json.JSONDecodeError as e:
+        print("abc")
+        print(clean_result)
+        print("def")
+        raise ValueError("レスポンスのJSON形式に誤りがあります.2") from e
+
+    # ここで、json_schema が指定されている場合はバリデーションを実施
+    if json_schema:
+        try:
+            validate(instance=structured_data, schema=json_schema)
+        except ValidationError as ve:
+            raise ValueError("レスポンスが指定されたJSONスキーマに準拠していません。") from ve
+
+    print("last data:\n\n\n\n", structured_data)
+    return structured_data
+
+def stream_chat_response(model_name: str, messages: list, temperature: float = 0.8):
     """
-    analysis情報を
-    paper_analysis
-    に保存
+    Ollama の /api/chat エンドポイントを使い、ストリーミングでチャット応答を生成するジェネレーター関数です。
+    
+    Parameters:
+        model (str): 使用するモデル名（例: "llama2"）
+        messages (list): 各メッセージに "role" と "content" を含む辞書のリスト
+        temperature (float): 応答の多様性を制御するパラメータ
+    
+    Yields:
+        response_text (str): 累積された応答テキスト（逐次更新）
     """
-    st.session_state["paper_analysis"] = analysis
+    url_chat = config.OLLAMA_CHAT_URL
+    data = {
+        "model": model_name,
+        "messages": messages,
+        "stream": True,
+        "temperature": temperature
+    }
+    response = requests.post(url_chat, json=data, stream=True)
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return
+    
+    response_text = ""
+    """for chunk in response.iter_lines():
+        if chunk:
+            # 受信したチャンクは JSON ではなくプレーンなテキストとして返ってくる前提
+            text = chunk.decode("utf-8")
+            print(text, end="", flush=True)  # 改行せずにリアルタイム出力
+            response_text += text
+            yield response_text"""
 
-def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
-    st.session_state["num_search_papers"] = num_search_papers
-    st.session_state["year_range"] = year_range
-    st.session_state["search_engine"] = search_engine
+    for line in response.iter_lines():
+        if line:
+            try:
+                # 各チャンクは JSON 形式で送られてくると想定
+                chunk = json.loads(line.decode("utf-8"))
+                # 実際のレスポンス構造に合わせてキーを変更してください
+                # ここでは例として、"message" キーの中の "content" を取り出しています
+                content = ""
+                if "message" in chunk and "content" in chunk["message"]:
+                    content = chunk["message"]["content"]
+                else:
+                    # 例外対応: "text" キーの場合
+                    content = chunk.get("text", "")
+                if content:
+                    print(content, end="", flush=True)
+                    response_text += content
+                    yield response_text
+            except json.JSONDecodeError:
+                # JSONパースに失敗した場合、デコード済みの文字列をそのまま出力
+                decoded_line = line.decode("utf-8")
+                print(decoded_line, end="", flush=True)
+                response_text += decoded_line
+                yield response_text
 
+if __name__ == "__main__":
+    # 非ストリーミング生成の例
+    model = config.OLLAMA_MODEL
+    prompt = "自己紹介をお願いします"
+    try:
+        structured_response = get_structured_response(model, prompt)
+        print("Structured response:")
+        print(structured_response)
+    except Exception as e:
+        print("Error:", e)
+    
+    """# ストリーミングチャットの例
+    messages = [
+        { "role": "system", "content": "あなたは親切なアシスタントです" },
+        { "role": "user", "content": "こんにちは" },
+        { "role": "assistant", "content": "はい、何かお手伝いできることはありますか？" },
+        { "role": "user", "content": "天気について教えてください" }
+    ]
+    print("\nStreaming chat response:")
+    for full_response in stream_chat_response(model, messages):
+        # リアルタイムにコンソールへ出力されるので、ここでの処理は不要
+        pass
+"""
 ```
 
-### File: streamlit_app/state/state_manager_back.py
+### File: streamlit_app/api/paper_api.py
 
 ```python
-# state_manager.py
+import requests
 import streamlit as st
-#from utils.paper_controller import PaperResult
-from core.data_models import PaperResult
-from utils.llm_controller import PaperAnalysisResult
-from utils import config
+import time
 
-def initialize_session_state():
-    # 検索モードと入力値
-    if "search_mode" not in st.session_state:
-        st.session_state["search_mode"] = "キーワード検索"
-    if "first_user_input" not in st.session_state:
-        st.session_state["first_user_input"] = ""
+def search_papers_semantic(query: str, year_from: int = 2023,year_to: int = None, limit: int = 20, max_retries=10) -> list[dict]:
+    """
+    指定されたクエリでSemantic Scholar APIから論文情報を取得し、辞書のリストを返す関数。
+
+    Args:
+        query (str): 検索クエリ
+        year_from (int): 取得する論文の開始年（例: 2023）
+        limit (int): 取得件数の上限（最大1000件）
+
+    Returns:
+        list[dict]: 論文情報の辞書のリスト
+    """
+    url = "http://api.semanticscholar.org/graph/v1/paper/search/"
+    query_params = {
+        "query": query,
+        "fields": "title,abstract,url,publicationTypes",
+        #"year": f"{year_from}-",
+        "limit": limit,
+        "sort": "relevance",
+    }
+    if year_to is not None:
+        query_params["year"] = f"{year_from}-{year_to}"
+    else:
+        query_params["year"] = f"{year_from}-"
+
+    retries = 0
+    while retries < max_retries:
+        response = requests.get(url, params=query_params)
+        data = response.json()
+
+        if "data" in data:
+            #st.write(data)
+            return data["data"]
+        elif data.get("code") == "429":
+            st.warning("APIが混雑しています。自動で再試行します...")
+            time.sleep(1)
+            retries += 1
+            continue
+        else:
+            st.error("APIエラーが発生しました。再度検索ボタンを押してください。")
+            st.write(data)
+            return []
     
-    # 論文検索結果
-    if "papers" not in st.session_state:
-        st.session_state["papers"] = PaperResult()
-    
-    # ユーザー入力解析結果
-    if "user_input_analysis" not in st.session_state:
-        st.session_state["user_input_analysis"] = None
+    st.error("APIが混雑しています。時間をおいて再試行してください。")
+        
 
-    # 検索に関するオプション
-    if "num_search_papers" not in st.session_state:
-        st.session_state["num_search_papers"] = 10
-    if "year_range" not in st.session_state:
-        st.session_state["year_range"] = (2023, 2025)
-    if "search_engine" not in st.session_state:
-        st.session_state["search_engine"] = "semantic scholar"
-
-    # ネットワークで選択された論文
-    if "selected_paper" not in st.session_state:
-        st.session_state["selected_paper"] = []
-
-    # 論文表示のための1つ前の論文保存用
-    if "prev_selected_nodes" not in st.session_state:
-        st.session_state["prev_selected_nodes"] = []
-
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-        st.session_state["initial_prompt_processed"] = True
+# 使用例（この行は他ファイルで呼び出す場合の参考）
+# results = search_papers('"human activity recognition sensor transformer"')
+if __name__ == "__main__":
+    query = "Time-Series Gene Expression Data Imputation"
+    data = search_papers_semantic(query=query, year_from=2023, limit=20)
+    print(data)
+    print(len(data))
 ```
 
 ### File: streamlit_app/utils/__init__.py
@@ -874,6 +1254,13 @@ default_ollama_url = (
     "http://host.docker.internal:11435" if running_in_docker() else "http://127.0.0.1:11435"
 )
 OLLAMA_API_BASE_URL = os.environ.get("OLLAMA_API_BASE_URL", default_ollama_url)
+# API エンドポイントの組み立てを一元化
+def get_ollama_url(path: str) -> str:
+    """Ollama API 用の完全な URL を返す"""
+    return f"{OLLAMA_API_BASE_URL}{path}"
+
+OLLAMA_CHAT_URL = get_ollama_url("/api/chat")
+OLLAMA_GENERATE_URL = get_ollama_url("/api/generate")
 #OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-q8_0")
 _experiment_message_template = '''
 以下は論文の情報です。
@@ -1694,501 +2081,119 @@ if __name__ == "__main__":
     print("abstract:", data.paper[0].abstract)
 ```
 
-### File: streamlit_app/core/__init__.py
+### File: streamlit_app/state/__init__.py
 
 ```python
 
 ```
 
-### File: streamlit_app/core/data_models.py
+### File: streamlit_app/state/state_manager.py
 
 ```python
-from dataclasses import dataclass, field
-from typing import List, Optional
+# state/state_manager.py
 
-@dataclass
-class PaperField:
-    name: str
-    score: float
-
-@dataclass
-class Label:
-    ja: str
-    en: str
-
-@dataclass
-class PaperAnalysisResult:
-    fields: List[PaperField]
-    target: Label
-    title: Optional[str] = None
-    methods: Optional[List[Label]] = None
-    factors: Optional[List[Label]] = None
-    metrics: Optional[List[Label]] = None
-    search_keywords: Optional[List[Label]] = None
-    main_keywords: Optional[List[Label]] = None
-
-@dataclass
-class PaperInfo:
-    title: str
-    abstract: Optional[str]
-    url: str
-    paper_id: str
-    relatedness: Optional[int] = None
-
-@dataclass
-class PaperResult:
-    papers: List[PaperInfo] = field(default_factory=list)
-
-```
-
-### File: streamlit_app/core/llm_service.py
-
-```python
-# core/llm_service.py
-
-from core.data_models import PaperAnalysisResult, PaperField, Label
-from api import ollama_api, lm_studio_api
-from utils import config
-
-def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-```
-
-### File: streamlit_app/core/paper_service.py
-
-```python
-# 論文APIへのアクセスロジック
-# core/paper_service.py
-
-from core.data_models import PaperResult, PaperInfo
-from api.paper_api import search_papers_semantic
-from typing import Tuple
-
-def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
-    year_from, year_to = year_range
-    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
-    
-    papers = [
-        PaperInfo(
-            title=paper["title"],
-            abstract=paper.get("abstract"),
-            url=paper["url"],
-            paper_id=paper["paperId"]
-        )
-        for paper in raw_papers
-    ]
-    return PaperResult(papers=papers)
-
-```
-
-### File: streamlit_app/api/__init__.py
-
-```python
-
-```
-
-### File: streamlit_app/api/lm_studio_api.py
-
-```python
-import json
-from openai import OpenAI
-from utils import config
-
-def get_structured_response(client: OpenAI, model: str, messages: list) -> dict:
-    """
-    lm studio jsonスキーマ固定出力
-    指定したモデルとメッセージでチャット補完を実行し、
-    返ってきたJSON形式のレスポンスを辞書型に変換して返す関数。
-    
-    Parameters:
-        client (OpenAI): OpenAIクライアントインスタンス
-        model (str): 使用するモデル名
-        messages (list): チャットで送信するメッセージのリスト
-    
-    Returns:
-        dict: 整形されたレスポンス（例: fields, labels など）
-    
-    Raises:
-        ValueError: JSONのパースに失敗した場合
-    """
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        # 必要に応じて追加パラメータを設定
-    )
-    
-
-    # message.content全体を取得
-    result = response.choices[0].message.content
-    clean_lines = [line for line in result.splitlines() if not line.strip().startswith("```")]
-    result = "\n".join(clean_lines)
-    #print(result)
-
-
-    try:
-        structured_data = json.loads(result)
-    except json.JSONDecodeError as e:
-        print(result)
-        raise ValueError("レスポンスのJSON形式に誤りがあります") from e
-
-    return structured_data
-
-def stream_chat_response(messages, temperature=0.2):
-    """
-    APIを呼び出してストリーミング応答を生成するジェネレーター関数
-    """
-    # システムプロンプトやAPI設定
-    system_prompt = "あなたは誠実で優秀な日本人のアシスタントです。特に指示が無い場合は、常に日本語で回答してください。"
-    url1 = "http://192.168.11.26:1234/v1"
-    client = OpenAI(base_url=url1, api_key="lm-studio")
-    MODEL = "my-model"
-    stream = client.chat.completions.create(
-        model=MODEL,
-        messages=messages,
-        stream=True,
-        #temperature=temperature
-    )
-    response_text = ""
-    for chunk in stream:
-        delta = chunk.choices[0].delta
-        if delta.content:
-            response_text += delta.content
-            yield response_text
-
-
-# 使用例
-if __name__ == "__main__":
-    client = OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm-studio")
-    #client = OpenAI(base_url="http://localhost:11435/v1", api_key="gemma3:12b")
-    
-    #MODEL = "gemma3:12b"
-    MODEL = "my-model"
-    #MODEL = "gemma-3-12b-it@q3_k_l"
-    user_paper = '''"""感度解析を介した時系列遺伝子発現データ補完法の開発と創薬応用,承認薬を含む生物活性化合物は治療標的となるタンパク質に作用することで疾患治療のための作用を示す。しか し、それ以外のタンパク質に作用することで副作用のような期待していない作用を示す場合がある。したがって、 化合物の作用メカニズムを明らかにすることは、創薬における重要課題になっている。近年、オミクス情報に基づく、化合物の作用メカニズム予測が注目されている。例えば、化合物をヒト由来細胞に 添加して、一定時間後に遺伝子発現を観測した、化合物応答遺伝子発現データは、化合物の作用メカニズムの予測 に用いられている。しかしながら、このような遺伝子発現データは、コストや時間の制約により、特定の時間点で のみ観測され時系列で観測されていない。これによって、特定の時間点での解析を行うことはできるが、経時的に 解析を行うことができない。したがって、現状のデータから、化合物の経時的な影響を予測することは限界がある。そこで本研究では、細胞内システムに対して構築された数理モデルの感度解析を行い、得られた結果に基づき、 観測されている化合物応答遺伝子発現データから、時系列の遺伝子発現データを補完する新たな手法を開発することを目指した。"""'''
-    user_paper = '''"""多次元センサデータ処理のためのTransformerを用いた自己教師あり学習手法,センサ信号を入力として,人間行動認識を行う深層学習アルゴリズムを開発した. ここでは自然言語で用いられるTransformerに基づいた事前学習言語モデルを構築して, その事前学習言語モデルを用いて,下流タスクである人間行動認識タスクを解く形を追求する. VanillaのTransformerでもこれは可能であるが, ここでは, 線形層によるn次元数値データの埋め込み、ビン化処理、出力層の線形処理層という３つの要素を特色とするｎ次元数値処理トランスフォーマーを提案する。5種類のデータセットに対して、このモデルの効果を確かめた. VanillaのTransformerと比較して, 精度で10%～15%程度, 向上させることができた"""'''
-    #user_paper = '''"""P2LHAP: Wearable-Sensor-Based Human Activity Recognition, Segmentation, and Forecast Through Patch-to-Label Seq2Seq Transformer Traditional deep learning methods struggle to simultaneously segment, recognize, and forecast human activities from sensor data. This limits their usefulness in many fields, such as healthcare and assisted living, where real-time understanding of ongoing and upcoming activities is crucial. This article introduces P2LHAP, a novel Patch-to-Label Seq2Seq framework that tackles all three tasks in an efficient single-task model. P2LHAP divides sensor data streams into a sequence of “patches,” served as input tokens, and outputs a sequence of patch-level activity labels, including the predicted future activities. A unique smoothing technique based on surrounding patch labels, is proposed to identify activity boundaries accurately. Additionally, P2LHAP learns patch-level representation by sensor signal channel-independent Transformer encoders and decoders. All channels share embedding and Transformer weights across all sequences. Evaluated on the three public datasets, P2LHAP significantly outperforms the state-of-the-art in all three tasks, demonstrating its effectiveness and potential for real-world applications."""'''
-    messages = [
-        {
-            "role": "user",
-            "content": config.experiment_message_without_paper + user_paper
-        }
-    ]
-    
-    data = get_structured_response(client, MODEL, messages)
-    print(data)
-    print(data.keys())
-    #for item in data['fields']:
-    #    print(f"{item['name']}:{item['score']}")
-
-```
-
-### File: streamlit_app/api/ollama_api.py
-
-```python
-import requests
-import json
-from utils import config
-from jsonschema import validate, ValidationError
-
-def get_structured_response(model_name: str, prompt: str, temperature: float = 0.8, max_tokens: int = 500) -> dict:
-    """
-    Ollama の /api/generate エンドポイントを使い、指定したプロンプトで生成を実行します。
-    非ストリーミングのため、レスポンス全体を一度に取得して辞書型に変換します。
-    """
-    url_generate = f"{config.OLLAMA_API_BASE_URL}/api/generate"
-    data = {
-        "model": model_name,
-        "prompt": prompt,
-        "stream": False,
-        "temperature": temperature,
-        #"max_tokens": max_tokens
-    }
-    response = requests.post(url_generate, json=data)
-    if response.status_code != 200:
-        raise Exception(f"Error: {response.status_code}")
-    
-    result = response.text
-    # 不要なマークダウン（例: ```）が含まれている場合は除去
-    clean_lines = [line for line in result.splitlines() if not line.strip().startswith("```")]
-    clean_result = "\n".join(clean_lines)
-    
-    try:
-        structured_data = json.loads(clean_result)
-    except json.JSONDecodeError as e:
-        raise ValueError("レスポンスのJSON形式に誤りがあります.1") from e
-    
-    # 不要なマークダウン（例: ```）が含まれている場合は除去
-    clean_lines = [line for line in structured_data["response"].splitlines() if not line.strip().startswith("```")]
-    clean_result = "\n".join(clean_lines)
-
-    try:
-        structured_data = json.loads(clean_result)
-    except json.JSONDecodeError as e:
-        print(clean_result)
-        raise ValueError("レスポンスのJSON形式に誤りがあります.2") from e
-
-    return structured_data
-
-def get_structured_response_v2(model_name: str, prompt: str, temperature: float = 0.8, max_tokens: int = 500, json_schema: dict = config.structured_json_schema) -> dict:
-    """
-    Structured output機能を利用して、JSONスキーマに沿ったレスポンスを取得する改良版関数です。
-    
-    Parameters:
-        model_name (str): 使用するモデル名
-        prompt (str): ユーザーのプロンプト
-        temperature (float): 出力の多様性を制御するパラメータ
-        max_tokens (int): 最大トークン数（必要に応じて利用）
-        json_schema (dict): JSONスキーマを指定する場合に渡す。例:
-            {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" },
-                "capital": { "type": "string" },
-                "languages": {
-                  "type": "array",
-                  "items": { "type": "string" }
-                }
-              },
-              "required": ["name", "capital", "languages"]
-            }
-    
-    Returns:
-        dict: 解析済みの構造化されたレスポンス
-    """
-    url_chat = f"{config.OLLAMA_API_BASE_URL}/api/chat"  # エンドポイントをchatに変更
-    payload = {
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
-        "temperature": temperature,
-    }
-    if json_schema:
-        payload["format"] = json_schema
-
-    response = requests.post(url_chat, json=payload)
-    if response.status_code != 200:
-        raise Exception(f"Error: {response.status_code}")
-    
-    result = response.text
-    
-    
-    try:
-        structured_data = json.loads(result)
-        print("\n\n",structured_data)
-    except json.JSONDecodeError as e:
-        raise ValueError("レスポンスのJSON形式に誤りがあります") from e
-    
-    try:
-        content = structured_data["message"]["content"]
-    except (KeyError, TypeError):
-        raise ValueError("レスポンス形式が想定と異なります")
-    
-    clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
-    clean_result = "\n".join(clean_lines)
-    
-    try:
-        structured_data = json.loads(clean_result)
-        print("\n\n", structured_data)
-    except json.JSONDecodeError as e:
-        print("abc")
-        print(clean_result)
-        print("def")
-        raise ValueError("レスポンスのJSON形式に誤りがあります.2") from e
-
-    # ここで、json_schema が指定されている場合はバリデーションを実施
-    if json_schema:
-        try:
-            validate(instance=structured_data, schema=json_schema)
-        except ValidationError as ve:
-            raise ValueError("レスポンスが指定されたJSONスキーマに準拠していません。") from ve
-
-    print("last data:\n\n\n\n", structured_data)
-    return structured_data
-
-def stream_chat_response(model_name: str, messages: list, temperature: float = 0.8):
-    """
-    Ollama の /api/chat エンドポイントを使い、ストリーミングでチャット応答を生成するジェネレーター関数です。
-    
-    Parameters:
-        model (str): 使用するモデル名（例: "llama2"）
-        messages (list): 各メッセージに "role" と "content" を含む辞書のリスト
-        temperature (float): 応答の多様性を制御するパラメータ
-    
-    Yields:
-        response_text (str): 累積された応答テキスト（逐次更新）
-    """
-    url_chat = f"{config.OLLAMA_API_BASE_URL}/api/chat"
-    data = {
-        "model": model_name,
-        "messages": messages,
-        "stream": True,
-        "temperature": temperature
-    }
-    response = requests.post(url_chat, json=data, stream=True)
-    if response.status_code != 200:
-        print(f"Error: {response.status_code}")
-        return
-    
-    response_text = ""
-    """for chunk in response.iter_lines():
-        if chunk:
-            # 受信したチャンクは JSON ではなくプレーンなテキストとして返ってくる前提
-            text = chunk.decode("utf-8")
-            print(text, end="", flush=True)  # 改行せずにリアルタイム出力
-            response_text += text
-            yield response_text"""
-
-    for line in response.iter_lines():
-        if line:
-            try:
-                # 各チャンクは JSON 形式で送られてくると想定
-                chunk = json.loads(line.decode("utf-8"))
-                # 実際のレスポンス構造に合わせてキーを変更してください
-                # ここでは例として、"message" キーの中の "content" を取り出しています
-                content = ""
-                if "message" in chunk and "content" in chunk["message"]:
-                    content = chunk["message"]["content"]
-                else:
-                    # 例外対応: "text" キーの場合
-                    content = chunk.get("text", "")
-                if content:
-                    print(content, end="", flush=True)
-                    response_text += content
-                    yield response_text
-            except json.JSONDecodeError:
-                # JSONパースに失敗した場合、デコード済みの文字列をそのまま出力
-                decoded_line = line.decode("utf-8")
-                print(decoded_line, end="", flush=True)
-                response_text += decoded_line
-                yield response_text
-
-if __name__ == "__main__":
-    # 非ストリーミング生成の例
-    model = config.OLLAMA_MODEL
-    prompt = "自己紹介をお願いします"
-    try:
-        structured_response = get_structured_response(model, prompt)
-        print("Structured response:")
-        print(structured_response)
-    except Exception as e:
-        print("Error:", e)
-    
-    """# ストリーミングチャットの例
-    messages = [
-        { "role": "system", "content": "あなたは親切なアシスタントです" },
-        { "role": "user", "content": "こんにちは" },
-        { "role": "assistant", "content": "はい、何かお手伝いできることはありますか？" },
-        { "role": "user", "content": "天気について教えてください" }
-    ]
-    print("\nStreaming chat response:")
-    for full_response in stream_chat_response(model, messages):
-        # リアルタイムにコンソールへ出力されるので、ここでの処理は不要
-        pass
-"""
-```
-
-### File: streamlit_app/api/paper_api.py
-
-```python
-import requests
 import streamlit as st
-import time
+from core.data_models import PaperResult, PaperAnalysisResult
+from utils import config
 
-def search_papers_semantic(query: str, year_from: int = 2023,year_to: int = None, limit: int = 20, max_retries=10) -> list[dict]:
-    """
-    指定されたクエリでSemantic Scholar APIから論文情報を取得し、辞書のリストを返す関数。
-
-    Args:
-        query (str): 検索クエリ
-        year_from (int): 取得する論文の開始年（例: 2023）
-        limit (int): 取得件数の上限（最大1000件）
-
-    Returns:
-        list[dict]: 論文情報の辞書のリスト
-    """
-    url = "http://api.semanticscholar.org/graph/v1/paper/search/"
-    query_params = {
-        "query": query,
-        "fields": "title,abstract,url,publicationTypes",
-        #"year": f"{year_from}-",
-        "limit": limit,
-        "sort": "relevance",
+def initialize_session_state():
+    defaults = {
+        "search_mode": "キーワード検索",
+        "first_user_input": "",
+        "papers": PaperResult(),
+        "user_input_analysis": None,
+        "paper_analysis": None,
+        "num_search_papers": 10,
+        "year_range": (2023, 2025),
+        "search_engine": "semantic scholar",
+        "selected_paper": [],
+        "prev_selected_nodes": [],
+        "chat_history": [{"role": "system", "content": config.system_prompt}],
+        "initial_prompt_processed": True,
     }
-    if year_to is not None:
-        query_params["year"] = f"{year_from}-{year_to}"
-    else:
-        query_params["year"] = f"{year_from}-"
 
-    retries = 0
-    while retries < max_retries:
-        response = requests.get(url, params=query_params)
-        data = response.json()
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
-        if "data" in data:
-            #st.write(data)
-            return data["data"]
-        elif data.get("code") == "429":
-            st.warning("APIが混雑しています。自動で再試行します...")
-            time.sleep(1)
-            retries += 1
-            continue
-        else:
-            st.error("APIエラーが発生しました。再度検索ボタンを押してください。")
-            st.write(data)
-            return []
+def reset_chat_history():
+    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+    st.session_state["initial_prompt_processed"] = False
+
+def update_selected_paper(selected_paper):
+    st.session_state["selected_paper"] = selected_paper
+    #st.session_state["initial_prompt_processed"] = False
+
+def update_paper_results(papers: PaperResult):
+    st.session_state["papers"] = papers
+
+def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
+    st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
+
+def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
+    st.session_state["num_search_papers"] = num_search_papers
+    st.session_state["year_range"] = year_range
+    st.session_state["search_engine"] = search_engine
+
+```
+
+### File: streamlit_app/state/state_manager_back.py
+
+```python
+# state_manager.py
+import streamlit as st
+#from utils.paper_controller import PaperResult
+from core.data_models import PaperResult
+from utils.llm_controller import PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    # 検索モードと入力値
+    if "search_mode" not in st.session_state:
+        st.session_state["search_mode"] = "キーワード検索"
+    if "first_user_input" not in st.session_state:
+        st.session_state["first_user_input"] = ""
     
-    st.error("APIが混雑しています。時間をおいて再試行してください。")
-        
+    # 論文検索結果
+    if "papers" not in st.session_state:
+        st.session_state["papers"] = PaperResult()
+    
+    # ユーザー入力解析結果
+    if "user_input_analysis" not in st.session_state:
+        st.session_state["user_input_analysis"] = None
 
-# 使用例（この行は他ファイルで呼び出す場合の参考）
-# results = search_papers('"human activity recognition sensor transformer"')
-if __name__ == "__main__":
-    query = "Time-Series Gene Expression Data Imputation"
-    data = search_papers_semantic(query=query, year_from=2023, limit=20)
-    print(data)
-    print(len(data))
+    # 検索に関するオプション
+    if "num_search_papers" not in st.session_state:
+        st.session_state["num_search_papers"] = 10
+    if "year_range" not in st.session_state:
+        st.session_state["year_range"] = (2023, 2025)
+    if "search_engine" not in st.session_state:
+        st.session_state["search_engine"] = "semantic scholar"
+
+    # ネットワークで選択された論文
+    if "selected_paper" not in st.session_state:
+        st.session_state["selected_paper"] = []
+
+    # 論文表示のための1つ前の論文保存用
+    if "prev_selected_nodes" not in st.session_state:
+        st.session_state["prev_selected_nodes"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+        st.session_state["initial_prompt_processed"] = True
 ```
 
 ### File: react_app/frontend/Dockerfile
