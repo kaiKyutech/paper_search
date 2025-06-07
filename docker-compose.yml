@@ -7,7 +7,7 @@ services:
       - "8501:8501"
     container_name: streamlit_app
     environment:
-      - OLLAMA_API_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_API_BASE_URL=http://host.docker.internal:11435
   backend:
     build:
       context: ./react_app/backend
