@@ -37,7 +37,9 @@
 2. 必要に応じて環境変数 `OLLAMA_MODEL` を設定します。未設定の場合は
    `gemma-textonly_v3:latest` が使用されます。
 3. Ollama API の接続先を変更したい場合は環境変数 `OLLAMA_API_BASE_URL`
-   を設定します。デフォルトは `http://127.0.0.1:11435` です。
+   を設定します。Docker 実行時は `http://host.docker.internal:11435` が
+   自動で使用され、ネイティブ環境では `http://127.0.0.1:11435` が
+   既定値となります。
 4. 以下のコマンドでアプリを起動します。
    ```bash
    streamlit run streamlit_app/app.py
