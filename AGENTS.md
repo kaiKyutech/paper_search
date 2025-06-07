@@ -4,42 +4,48 @@
 
 ```
 paper_search/
-├── api
-│   ├── lm_studio_api.py
-│   ├── ollama_api.py
-│   └── paper_api.py
-├── backend
-│   ├── README.md
-│   ├── main.py
-│   └── requirements.txt
-├── app.py
-├── core
-│   ├── data_models.py
-│   ├── llm_service.py
-│   └── paper_service.py
-├── frontend
-│   ├── README.md
-│   ├── package.json
-│   └── src
-│       └── main.tsx
+├── AGENTS.md
+├── README.md
+├── pulling_files.py
+├── project_export.md
 ├── new_repo
 │   ├── AGENTS.md
 │   └── README.md
-├── requirements.txt
-├── state
-│   ├── state_manager.py
-│   └── state_manager_back.py
-├── ui
-│   ├── chat_panel.py
-│   ├── paper_network.py
-│   ├── result_summary.py
-│   └── search_bar.py
-└── utils
-    ├── config.py
-    ├── cytoscape_utils.py
-    ├── field_colors.py
-    ├── llm_controller.py
-    └── paper_controller.py
+├── react_app
+│   ├── backend
+│   │   ├── README.md
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   └── frontend
+│       ├── README.md
+│       ├── package.json
+│       └── src
+│           └── main.tsx
+└── streamlit_app
+    ├── api
+    │   ├── lm_studio_api.py
+    │   ├── ollama_api.py
+    │   └── paper_api.py
+    ├── app.py
+    ├── core
+    │   ├── data_models.py
+    │   ├── llm_service.py
+    │   └── paper_service.py
+    ├── requirements.txt
+    ├── state
+    │   ├── state_manager.py
+    │   └── state_manager_back.py
+    ├── ui
+    │   ├── chat_panel.py
+    │   ├── paper_network.py
+    │   ├── result_summary.py
+    │   └── search_bar.py
+    └── utils
+        ├── config.py
+        ├── cytoscape_utils.py
+        ├── field_colors.py
+        ├── llm_controller.py
+        └── paper_controller.py
 ```
 
 新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
