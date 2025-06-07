@@ -17,6 +17,13 @@ default_ollama_url = (
     "http://host.docker.internal:11435" if running_in_docker() else "http://127.0.0.1:11435"
 )
 OLLAMA_API_BASE_URL = os.environ.get("OLLAMA_API_BASE_URL", default_ollama_url)
+# API エンドポイントの組み立てを一元化
+def get_ollama_url(path: str) -> str:
+    """Ollama API 用の完全な URL を返す"""
+    return f"{OLLAMA_API_BASE_URL}{path}"
+
+OLLAMA_CHAT_URL = get_ollama_url("/api/chat")
+OLLAMA_GENERATE_URL = get_ollama_url("/api/generate")
 #OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-q8_0")
 _experiment_message_template = '''
 以下は論文の情報です。
