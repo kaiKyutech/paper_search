@@ -28,3 +28,4 @@ services:
       - backend
     volumes:
       - ./react_app/frontend:/app
+      - /app/node_modules
