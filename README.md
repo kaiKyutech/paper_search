@@ -1,7 +1,7 @@
 # paper_search
 
-このプロジェクトは Streamlit で動作する論文検索・可視化アプリです。まだ開発途中のため動作は安定していませんが、以下の手順で起動できます。
-
+このプロジェクトは論文検索・可視化を目的としたアプリケーション群です。
+フロントエンドは **Next.js(React+TypeScript) + Material-UI**、バックエンドは **FastAPI**、補助ツールとして **Streamlit** を利用しています。
 ## 必要条件
 - Python 3.10 以上
 - [Ollama](https://github.com/ollama/ollama) がインストールされていること
@@ -26,7 +26,8 @@
    ```
    それぞれ個別に起動したい場合はサービス名を指定してください。
    - Streamlit アプリのみ: `docker-compose up streamlit`
-   - React フロントエンド + FastAPI バックエンド: `docker-compose up frontend backend`
+   - Next.js フロントエンド + FastAPI バックエンド: `docker-compose up frontend backend`
+  (Next.js は http://localhost:3000 で起動します)
 
 2. 停止する際は `Ctrl+C` で終了後に `docker-compose down` を実行します。
 
@@ -63,18 +64,19 @@ OLLAMA_API_BASE_URL=http://host.docker.internal:11435
 ## 今後追加したい機能とそれに対する展望
 - 既に解析した論文を保存しておく機能。
 - 使用するモデルを動的に変更できる機能。これは解析AIと解説AIは別として登録できるようにすること。デフォルトまで指定できるといい。
-- React などに環境移行し、UI を見やすくする。
+- Next.js などへの移行で UI を改善する。
 
 ## 新構成
-React フロントエンドと FastAPI バックエンドの開発を開始しました。
+Next.js フロントエンドと FastAPI バックエンドの開発を開始しました。
 既存の Streamlit アプリは `streamlit_app` ディレクトリで従来通り動作します。
 新しいディレクトリ構成は以下の通りです。
 
 - `streamlit_app/` Streamlit 版アプリケーション
-- `react_app/frontend/` React アプリケーション
+- `react_app/frontend/` Next.js アプリケーション
 - `react_app/backend/` FastAPI アプリケーション
 
 
+- 各プロジェクトにはサンプルコードを格納する `temp/` ディレクトリがあります。編集前に内容を確認してください。
 ## Docker Compose での起動方法
 Docker 環境が利用できる場合は、`docker-compose` で各アプリケーションを簡単に起動できます。
 
@@ -83,10 +85,11 @@ Docker 環境が利用できる場合は、`docker-compose` で各アプリケ�
 docker-compose up streamlit
 ```
 
-### React フロントエンド + FastAPI バックエンドを起動
+### Next.js フロントエンド + FastAPI バックエンドを起動
 ```bash
 docker-compose up frontend backend
 ```
+Next.js は http://localhost:3000 で起動します。
 
 ### すべてのサービスを起動
 ```bash

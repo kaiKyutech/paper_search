@@ -15,12 +15,17 @@ paper_search/
 │   │   ├── README.md
 │   │   ├── main.py
 │   │   └── requirements.txt
-│   └── frontend
-│       ├── Dockerfile
-│       ├── README.md
-│       ├── package.json
-│       └── src
-│           └── main.tsx
+│   ├── frontend
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── next-env.d.ts
+│   │   ├── next.config.js
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── pages
+│   │       └── index.tsx
+│   └── temp
+│       └── .gitkeep
 └── streamlit_app
     ├── Dockerfile
     ├── README.md
@@ -37,6 +42,8 @@ paper_search/
     ├── state
     │   ├── state_manager.py
     │   └── state_manager_back.py
+    ├── temp
+    │   └── .gitkeep
     ├── ui
     │   ├── chat_panel.py
     │   ├── paper_network.py
@@ -51,6 +58,8 @@ paper_search/
 ```
 
 新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+
+各プロジェクトの `temp` ディレクトリには、参考用コードを配置します。編集作業を行う際は **まず各 temp フォルダを確認し、該当するコードがあれば参考にしてください。**
 
 ## 開発規約
 - 使用言語は **Python** とする

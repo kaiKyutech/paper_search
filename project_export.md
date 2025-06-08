@@ -9,10 +9,14 @@ paper_search/
 │   │   ├── Dockerfile
 │   │   ├── main.py
 │   │   └── requirements.txt
-│   └── frontend
-│       ├── Dockerfile
-│       └── src
-│           └── main.tsx
+│   ├── frontend
+│   │   ├── Dockerfile
+│   │   ├── next-env.d.ts
+│   │   ├── next.config.js
+│   │   └── pages
+│   │       └── index.tsx
+│   └── temp
+│       └── .gitkeep
 └── streamlit_app
     ├── Dockerfile
     ├── __init__.py
@@ -32,6 +36,8 @@ paper_search/
     │   ├── __init__.py
     │   ├── state_manager.py
     │   └── state_manager_back.py
+    ├── temp
+    │   └── .gitkeep
     ├── ui
     │   ├── __init__.py
     │   ├── chat_panel.py
@@ -67,12 +73,17 @@ paper_search/
 │   │   ├── README.md
 │   │   ├── main.py
 │   │   └── requirements.txt
-│   └── frontend
-│       ├── Dockerfile
-│       ├── README.md
-│       ├── package.json
-│       └── src
-│           └── main.tsx
+│   ├── frontend
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── next-env.d.ts
+│   │   ├── next.config.js
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── pages
+│   │       └── index.tsx
+│   └── temp
+│       └── .gitkeep
 └── streamlit_app
     ├── Dockerfile
     ├── README.md
@@ -89,6 +100,8 @@ paper_search/
     ├── state
     │   ├── state_manager.py
     │   └── state_manager_back.py
+    ├── temp
+    │   └── .gitkeep
     ├── ui
     │   ├── chat_panel.py
     │   ├── paper_network.py
@@ -103,6 +116,8 @@ paper_search/
 ```
 
 新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+
+各プロジェクトの `temp` ディレクトリには、参考用コードを配置します。編集作業を行う際は **まず各 temp フォルダを確認し、該当するコードがあれば参考にしてください。**
 
 ## 開発規約
 - 使用言語は **Python** とする
@@ -133,20 +148,128 @@ services:
     container_name: streamlit_app
     extra_hosts:
       - host.docker.internal:host-gateway
+    volumes:
+      - ./streamlit_app:/app
   backend:
     build:
       context: ./react_app/backend
     ports:
       - "8000:8000"
     container_name: fastapi_backend
+    volumes:
+      - ./react_app/backend:/app
   frontend:
     build:
       context: ./react_app/frontend
     ports:
-      - "5173:5173"
+      - "3000:3000"
     container_name: react_frontend
     depends_on:
       - backend
+    volumes:
+      - ./react_app/frontend:/app
+
+```
+
+### File: react_app/backend/Dockerfile
+
+```
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+```
+
+### File: react_app/backend/main.py
+
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/health")
+async def health_check():
+    """ヘルスチェック用エンドポイント"""
+    return {"status": "ok"}
+
+
+```
+
+### File: react_app/backend/requirements.txt
+
+```
+fastapi
+uvicorn
+
+```
+
+### File: react_app/frontend/Dockerfile
+
+```
+FROM node:18
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . /app
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
+```
+
+### File: react_app/frontend/next-env.d.ts
+
+```
+/// <reference types="next" />
+/// <reference types="next/types/global" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information.
+
+```
+
+### File: react_app/frontend/next.config.js
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+
+module.exports = nextConfig
+
+```
+
+### File: react_app/frontend/pages/index.tsx
+
+```
+import { Button } from '@mui/material';
+
+export default function Home() {
+  return (
+    <div>
+      <h1>Paper Search Frontend</h1>
+      <Button variant="contained">Hello</Button>
+    </div>
+  );
+}
+
+```
+
+### File: react_app/temp/.gitkeep
+
+```
 
 ```
 
@@ -1226,6 +1349,12 @@ if __name__ == "__main__":
     print(len(data))
 ```
 
+### File: streamlit_app/temp/.gitkeep
+
+```
+
+```
+
 ### File: streamlit_app/utils/__init__.py
 
 ```python
@@ -2194,79 +2323,5 @@ def initialize_session_state():
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
         st.session_state["initial_prompt_processed"] = True
-```
-
-### File: react_app/frontend/Dockerfile
-
-```
-FROM node:18
-WORKDIR /app
-COPY package.json ./
-RUN npm install
-COPY . /app
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host"]
-
-```
-
-### File: react_app/frontend/src/main.tsx
-
-```
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-
-const App = () => <div>Paper Search Frontend</div>;
-
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-
-```
-
-### File: react_app/backend/Dockerfile
-
-```
-FROM python:3.10-slim
-WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-```
-
-### File: react_app/backend/main.py
-
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/health")
-async def health_check():
-    """ヘルスチェック用エンドポイント"""
-    return {"status": "ok"}
-
-
-```
-
-### File: react_app/backend/requirements.txt
-
-```
-fastapi
-uvicorn
-
 ```
 
