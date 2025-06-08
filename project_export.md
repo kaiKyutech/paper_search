@@ -1,7 +1,5 @@
-## プロジェクト構成
-
-```
-paper_search/
+Markdown export complete: project_export.md
+h/
 ├── AGENTS.md
 ├── docker-compose.yml
 ├── react_app
@@ -168,108 +166,10 @@ services:
       - backend
     volumes:
       - ./react_app/frontend:/app
+      - frontend_node_modules:/app/node_modules
 
-```
-
-### File: react_app/backend/Dockerfile
-
-```
-FROM python:3.10-slim
-WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-```
-
-### File: react_app/backend/main.py
-
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/health")
-async def health_check():
-    """ヘルスチェック用エンドポイント"""
-    return {"status": "ok"}
-
-
-```
-
-### File: react_app/backend/requirements.txt
-
-```
-fastapi
-uvicorn
-
-```
-
-### File: react_app/frontend/Dockerfile
-
-```
-FROM node:18
-WORKDIR /app
-COPY package.json ./
-RUN npm install
-COPY . /app
-EXPOSE 3000
-CMD ["npm", "run", "dev"]
-
-```
-
-### File: react_app/frontend/next-env.d.ts
-
-```
-/// <reference types="next" />
-/// <reference types="next/types/global" />
-/// <reference types="next/image-types/global" />
-
-// NOTE: This file should not be edited
-// see https://nextjs.org/docs/basic-features/typescript for more information.
-
-```
-
-### File: react_app/frontend/next.config.js
-
-```javascript
-/** @type {import('next').NextConfig} */
-const nextConfig = {}
-
-module.exports = nextConfig
-
-```
-
-### File: react_app/frontend/pages/index.tsx
-
-```
-import { Button } from '@mui/material';
-
-export default function Home() {
-  return (
-    <div>
-      <h1>Paper Search Frontend</h1>
-      <Button variant="contained">Hello</Button>
-    </div>
-  );
-}
-
-```
-
-### File: react_app/temp/.gitkeep
-
-```
+volumes:
+  frontend_node_modules:
 
 ```
 
@@ -499,485 +399,6 @@ plotly
 st-cytoscape==0.0.5
 jsonschema
 python-dotenv
-
-```
-
-### File: streamlit_app/core/__init__.py
-
-```python
-
-```
-
-### File: streamlit_app/core/data_models.py
-
-```python
-from dataclasses import dataclass, field
-from typing import List, Optional
-
-@dataclass
-class PaperField:
-    name: str
-    score: float
-
-@dataclass
-class Label:
-    ja: str
-    en: str
-
-@dataclass
-class PaperAnalysisResult:
-    fields: List[PaperField]
-    target: Label
-    title: Optional[str] = None
-    methods: Optional[List[Label]] = None
-    factors: Optional[List[Label]] = None
-    metrics: Optional[List[Label]] = None
-    search_keywords: Optional[List[Label]] = None
-    main_keywords: Optional[List[Label]] = None
-
-@dataclass
-class PaperInfo:
-    title: str
-    abstract: Optional[str]
-    url: str
-    paper_id: str
-    relatedness: Optional[int] = None
-
-@dataclass
-class PaperResult:
-    papers: List[PaperInfo] = field(default_factory=list)
-
-```
-
-### File: streamlit_app/core/llm_service.py
-
-```python
-# core/llm_service.py
-
-from core.data_models import PaperAnalysisResult, PaperField, Label
-from api import ollama_api, lm_studio_api
-from utils import config
-
-def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-```
-
-### File: streamlit_app/core/paper_service.py
-
-```python
-# 論文APIへのアクセスロジック
-# core/paper_service.py
-
-from core.data_models import PaperResult, PaperInfo
-from api.paper_api import search_papers_semantic
-from typing import Tuple
-
-def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
-    year_from, year_to = year_range
-    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
-    
-    papers = [
-        PaperInfo(
-            title=paper["title"],
-            abstract=paper.get("abstract"),
-            url=paper["url"],
-            paper_id=paper["paperId"]
-        )
-        for paper in raw_papers
-    ]
-    return PaperResult(papers=papers)
-
-```
-
-### File: streamlit_app/ui/__init__.py
-
-```python
-
-```
-
-### File: streamlit_app/ui/chat_panel.py
-
-```python
-# テキストチャット
-import streamlit as st
-from utils import llm_controller, config
-from api import lm_studio_api, ollama_api
-
-def render_history(chat_history, css_text_user, css_text_assistant):
-    """
-    チャット履歴をHTML形式でレンダリングする。
-    """
-    out = ""
-    script = """<script>
-        var chatBoxes = document.getElementsByClassName("chat-box");
-        if (chatBoxes.length > 0) {
-            chatBoxes[chatBoxes.length - 1].scrollTop = chatBoxes[chatBoxes.length - 1].scrollHeight;
-        }
-    </script>"""
-    for msg in chat_history:
-        if msg["role"] == "assistant":
-            out += f"""{css_text_assistant}<strong>Assistant:</strong> {msg['content']}</div>{script}\n\n"""
-        elif msg["role"] == "user":
-            out += f"""{css_text_user}<strong>User:</strong> {msg['content']}</div>{script}\n\n"""
-    return out
-
-def update_chat_history_with_response(api_messages, stream_placeholder):
-    """
-    LLM APIからのストリーミングレスポンスを処理し、チャット履歴を更新する。
-    """
-    #MODEL = config.OLLAMA_MODEL
-    MODEL = "gemma3:12b"
-    #MODEL = "deepseek-r1:8b-0528-qwen3-q8_0"
-    assistant_response = ""
-    #stream_placeholder = st.empty()  # ストリーミング更新用プレースホルダー
-    for updated_text in ollama_api.stream_chat_response(model_name=MODEL,messages=api_messages):
-        assistant_response = updated_text
-        stream_placeholder.markdown(f"<strong>Assistant:</strong> {updated_text}</div>", unsafe_allow_html=True)
-    stream_placeholder.empty()
-    st.session_state["chat_history"].append({
-        "role": "assistant",
-        "content": assistant_response
-    })
-    return assistant_response
-
-def render_stream(stream_placeholder, selected_paper):
-    selected_paper_content = f"{selected_paper['title']}, {selected_paper['abstract']}"
-    if st.session_state["search_mode"] == "AI検索 2":
-        initial_prompt = (
-            f"{config.INST_PROMPT_AI}\nユーザー論文:{st.session_state['first_user_input']}"
-            f"\"\"\"選択された論文\"\"\"{selected_paper_content}\"\"\""
-        )
-    elif st.session_state["search_mode"] == "キーワード検索":
-        initial_prompt = (
-            f"{config.INST_PROMPT_KEYWORDS}\n"
-            f"検索キーワード：{st.session_state['first_user_input']}\n論文：{selected_paper_content}"
-        )
-    else:
-        st.error("検索方法が指定されていないことになっています。")
-        return
-
-    st.session_state["chat_history"].append({
-        "role": "hidden_user",
-        "content": initial_prompt
-    })
-
-    # hidden_user を user に変換した API 用メッセージリストの作成
-    api_messages = [
-        {"role": "user" if msg["role"] == "hidden_user" else msg["role"], "content": msg["content"]}
-        for msg in st.session_state["chat_history"]
-    ]
-    update_chat_history_with_response(api_messages, stream_placeholder)
-
-        
-```
-
-### File: streamlit_app/ui/paper_network.py
-
-```python
-# ui/paper_network_and_basic_info.py
-import streamlit as st
-from utils import cytoscape_utils
-from utils import field_colors
-from st_cytoscape import cytoscape
-
-def render_network_sections(papers, details=False):
-    analysis_map = {}
-    all_analyzed = True
-    for paper in papers.papers:
-        key = f"paper_analysis_{paper.paper_id}"
-        analysis = st.session_state.get(key)
-        if analysis:
-            analysis_map[paper.paper_id] = analysis
-        else:
-            all_analyzed = False
-
-    if all_analyzed and analysis_map:
-        elements = cytoscape_utils.build_cy_elements_by_field(papers, analysis_map)
-    else:
-        elements = cytoscape_utils.build_cy_elements_simple(papers)
-    style_sheet = [
-        {
-            "selector": "node",
-            "style": {
-                "label": "data(label)",
-                "font-size": "10px",
-                "color": "#333",
-                "background-color": "data(color)",
-                "width": "35px",
-                "height": "35px",
-            },
-        },
-        {
-            "selector": "edge",
-            "style": {
-                "width": 2,
-                "line-color": "#ccc",
-                "target-arrow-shape": "triangle",
-                "target-arrow-color": "#ccc",
-                "curve-style": "bezier",
-            }
-        },
-        {
-            "selector": "node:selected",
-            "style": {
-                "background-color": "#FF0000",
-                "border-color": "#F00",
-                "border-width": "2px",
-            }
-        },
-        {
-            "selector": "[type='field']",
-            "style": {"shape": "rectangle", "width": "50px", "height": "50px"},
-        },
-        {
-            "selector": "[type='subfield']",
-            "style": {"shape": "round-rectangle", "width": "45px", "height": "45px"},
-        },
-        {
-            "selector": "[type='paper']",
-            "style": {"shape": "ellipse", "width": "35px", "height": "35px"},
-        },
-    ]
-    layout = {"name": "preset"}
-    
-    with st.container():
-        selected = cytoscape(
-            elements,
-            style_sheet,
-            height="800px",
-            layout=layout,
-            key="graph",
-            selection_type="single",
-            min_zoom=0.5,
-            max_zoom=1
-        )
-    # ノード情報の高速検索用辞書（センター以外）
-    element_dict = {str(f"{e['data']['id']}"): e for e in elements if e["data"]["id"] != "center"}
-    # 論文情報を paper_id でマッピング（ここでは PaperFields の paper_id と対応付け）
-    papers_dict = {str(f"paper_{p.paper_id}"): p for p in papers.papers}
-    
-    return selected, element_dict, papers_dict
-
-def get_selected_papers(selected, element_dict, papers_dict):
-    """
-    選択されたノードから論文情報のリストを作成する関数
-    """
-    selected_papers = []
-    if selected and "nodes" in selected:
-        for node_id in selected["nodes"]:
-            if node_id == "center":
-                continue
-            node_papers = papers_dict.get(node_id)
-            node_elem = element_dict.get(node_id)
-            if not node_papers:
-                print("why")
-                continue
-            selected_papers.append({
-                "title": node_papers.title,
-                "abstract": node_papers.abstract,
-                "url": node_papers.url,
-                "paper_id": node_papers.paper_id,
-                "relatedness": node_elem["data"]["relatedness"],
-            #    "relatedness": getattr(paper, "relatedness", 0),  # 存在しない場合は0とする例
-            #    "university": getattr(paper, "university", "不明"),
-            #    "url": paper.url,
-            #    "abstract": paper.abstract,
-            })
-    return selected_papers
-```
-
-### File: streamlit_app/ui/result_summary.py
-
-```python
-# ui/result_summary.py
-import streamlit as st
-import plotly.express as px
-import pandas as pd
-from utils.field_colors import get_field_color
-
-def render__paper_info_analysis(fields):
-    if not fields:
-        st.warning("データがありません。")
-        return
-
-    total_score = sum(field.score for field in fields)
-    data = [
-        {"name": field.name, "score": field.score, "percentage": 100 * field.score / total_score}
-        for field in fields
-    ]
-    df = pd.DataFrame(data).copy().sort_values("percentage", ascending=False)
-    sorted_names = df["name"].tolist()
-
-    color_map = {name: get_field_color(name) for name in df["name"]}
-
-    fig = px.pie(
-        df,
-        names="name",
-        values="percentage",
-        title="各分野の割合（多い順・時計回り）",
-        category_orders={"name": sorted_names},
-        color="name",
-        color_discrete_map=color_map,
-    )
-    fig.update_traces(direction="clockwise")
-    st.plotly_chart(fig, use_container_width=True)
-
-def render_paper_analysis_result(result):
-    data = {}
-    if result.title:
-        data["タイトル"] = result.title
-    if result.fields:
-        data["分野"] = ", ".join([f"{field.name} ({field.score})" for field in result.fields])
-    if result.target:
-        data["対象"] = result.target.ja
-    if result.methods:
-        data["手法"] = ", ".join([label.ja for label in result.methods])
-    if result.factors:
-        data["要因"] = ", ".join([label.ja for label in result.factors])
-    if result.metrics:
-        data["指標"] = ", ".join([label.ja for label in result.metrics])
-    if result.search_keywords:
-        data["検索キーワード"] = ", ".join([label.ja for label in result.search_keywords])
-    if result.main_keywords:
-        data["主要キーワード"] = ", ".join([label.ja for label in result.main_keywords])
-    
-    df = pd.DataFrame.from_dict(data, orient="index", columns=["内容"])
-    st.table(df)
-
-def render_info_paper(papers):
-    for paper in papers:
-        st.write(f"タイトル: {paper['title']}")
-        st.write(f"関連順位: {paper.get('relatedness', 0)} 位")
-        st.write(f"URL: {paper['url']}")
-        st.write(f"アブストラクト：\n {paper['abstract']}")
-        st.write("---")
-
-```
-
-### File: streamlit_app/ui/search_bar.py
-
-```python
-# ui/search_bar.py
-
-import streamlit as st
-from core import paper_service, llm_service
-from state import state_manager
-
-def render_search_section():
-    st.radio(
-        "検索モード選択:",
-        ("キーワード検索", "AI検索 1", "AI検索 2"),
-        horizontal=True,
-        key="search_mode"
-    )
-
-    st.caption(
-        '※ キーワード検索 : 指定されたキーワードで検索を行います。（例：「genarative ai transformer」）',
-        unsafe_allow_html=True
-    )
-    st.caption(
-        '※ AI検索 1 : 入力された文章から関連度の高い論文を自動で解析し検索します。（例：「～～に関する論文が知りたい」）',
-        unsafe_allow_html=True
-    )
-    st.caption(
-        '※ AI検索 2 : 論文で論文を検索する場合は「(論文タイトル),(論文アブストラクト)」の形式にしてください。',
-        unsafe_allow_html=True
-    )
-
-    input_col, search_button = st.columns([8, 2])
-
-    with input_col:
-        st.text_area("入力:", value="", placeholder="ここに入力...", key="first_user_input")
-
-    with search_button:
-        if st.button("検索実行"):
-            query = st.session_state["first_user_input"]
-            mode = st.session_state["search_mode"]
-            engine = st.session_state["search_engine"]
-            year_range = st.session_state["year_range"]
-            num_papers = st.session_state["num_search_papers"]
-
-            if mode == "キーワード検索":
-                results = paper_service.fetch_papers_by_query(query, year_range, num_papers)
-                state_manager.update_paper_results(results)
-
-            elif mode == "AI検索 2":
-                analysis = llm_service.analyze_user_paper(query)
-                state_manager.update_user_input_analysis(analysis)
-                ai_query = analysis.search_keywords[0].en
-                results = paper_service.fetch_papers_by_query(ai_query, year_range, num_papers)
-                state_manager.update_paper_results(results)
-
-def render_search_info_selection_section():
-    with st.expander("オプション設定"):
-        search_num_col, year_col, search_engine_col = st.columns([1, 1, 1])
-
-        with search_num_col:
-            st.slider(
-                "検索する論文数",
-                1,
-                50,
-                st.session_state["num_search_papers"],
-                key="num_search_papers",
-            )
-        with year_col:
-            st.slider(
-                "発行年の範囲",
-                1970,
-                2025,
-                st.session_state["year_range"],
-                key="year_range",
-            )
-        with search_engine_col:
-            st.radio(
-                "検索エンジン選択:",
-                ("semantic scholar", "Google Scholar"),
-                horizontal=True,
-                key="search_engine",
-            )
-
 
 ```
 
@@ -1347,6 +768,600 @@ if __name__ == "__main__":
     data = search_papers_semantic(query=query, year_from=2023, limit=20)
     print(data)
     print(len(data))
+```
+
+### File: streamlit_app/ui/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/ui/chat_panel.py
+
+```python
+# テキストチャット
+import streamlit as st
+from utils import llm_controller, config
+from api import lm_studio_api, ollama_api
+
+def render_history(chat_history, css_text_user, css_text_assistant):
+    """
+    チャット履歴をHTML形式でレンダリングする。
+    """
+    out = ""
+    script = """<script>
+        var chatBoxes = document.getElementsByClassName("chat-box");
+        if (chatBoxes.length > 0) {
+            chatBoxes[chatBoxes.length - 1].scrollTop = chatBoxes[chatBoxes.length - 1].scrollHeight;
+        }
+    </script>"""
+    for msg in chat_history:
+        if msg["role"] == "assistant":
+            out += f"""{css_text_assistant}<strong>Assistant:</strong> {msg['content']}</div>{script}\n\n"""
+        elif msg["role"] == "user":
+            out += f"""{css_text_user}<strong>User:</strong> {msg['content']}</div>{script}\n\n"""
+    return out
+
+def update_chat_history_with_response(api_messages, stream_placeholder):
+    """
+    LLM APIからのストリーミングレスポンスを処理し、チャット履歴を更新する。
+    """
+    #MODEL = config.OLLAMA_MODEL
+    MODEL = "gemma3:12b"
+    #MODEL = "deepseek-r1:8b-0528-qwen3-q8_0"
+    assistant_response = ""
+    #stream_placeholder = st.empty()  # ストリーミング更新用プレースホルダー
+    for updated_text in ollama_api.stream_chat_response(model_name=MODEL,messages=api_messages):
+        assistant_response = updated_text
+        stream_placeholder.markdown(f"<strong>Assistant:</strong> {updated_text}</div>", unsafe_allow_html=True)
+    stream_placeholder.empty()
+    st.session_state["chat_history"].append({
+        "role": "assistant",
+        "content": assistant_response
+    })
+    return assistant_response
+
+def render_stream(stream_placeholder, selected_paper):
+    selected_paper_content = f"{selected_paper['title']}, {selected_paper['abstract']}"
+    if st.session_state["search_mode"] == "AI検索 2":
+        initial_prompt = (
+            f"{config.INST_PROMPT_AI}\nユーザー論文:{st.session_state['first_user_input']}"
+            f"\"\"\"選択された論文\"\"\"{selected_paper_content}\"\"\""
+        )
+    elif st.session_state["search_mode"] == "キーワード検索":
+        initial_prompt = (
+            f"{config.INST_PROMPT_KEYWORDS}\n"
+            f"検索キーワード：{st.session_state['first_user_input']}\n論文：{selected_paper_content}"
+        )
+    else:
+        st.error("検索方法が指定されていないことになっています。")
+        return
+
+    st.session_state["chat_history"].append({
+        "role": "hidden_user",
+        "content": initial_prompt
+    })
+
+    # hidden_user を user に変換した API 用メッセージリストの作成
+    api_messages = [
+        {"role": "user" if msg["role"] == "hidden_user" else msg["role"], "content": msg["content"]}
+        for msg in st.session_state["chat_history"]
+    ]
+    update_chat_history_with_response(api_messages, stream_placeholder)
+
+        
+```
+
+### File: streamlit_app/ui/paper_network.py
+
+```python
+# ui/paper_network_and_basic_info.py
+import streamlit as st
+from utils import cytoscape_utils
+from utils import field_colors
+from st_cytoscape import cytoscape
+
+def render_network_sections(papers, details=False):
+    analysis_map = {}
+    all_analyzed = True
+    for paper in papers.papers:
+        key = f"paper_analysis_{paper.paper_id}"
+        analysis = st.session_state.get(key)
+        if analysis:
+            analysis_map[paper.paper_id] = analysis
+        else:
+            all_analyzed = False
+
+    if all_analyzed and analysis_map:
+        elements = cytoscape_utils.build_cy_elements_by_field(papers, analysis_map)
+    else:
+        elements = cytoscape_utils.build_cy_elements_simple(papers)
+    style_sheet = [
+        {
+            "selector": "node",
+            "style": {
+                "label": "data(label)",
+                "font-size": "10px",
+                "color": "#333",
+                "background-color": "data(color)",
+                "width": "35px",
+                "height": "35px",
+            },
+        },
+        {
+            "selector": "edge",
+            "style": {
+                "width": 2,
+                "line-color": "#ccc",
+                "target-arrow-shape": "triangle",
+                "target-arrow-color": "#ccc",
+                "curve-style": "bezier",
+            }
+        },
+        {
+            "selector": "node:selected",
+            "style": {
+                "background-color": "#FF0000",
+                "border-color": "#F00",
+                "border-width": "2px",
+            }
+        },
+        {
+            "selector": "[type='field']",
+            "style": {"shape": "rectangle", "width": "50px", "height": "50px"},
+        },
+        {
+            "selector": "[type='subfield']",
+            "style": {"shape": "round-rectangle", "width": "45px", "height": "45px"},
+        },
+        {
+            "selector": "[type='paper']",
+            "style": {"shape": "ellipse", "width": "35px", "height": "35px"},
+        },
+    ]
+    layout = {"name": "preset"}
+    
+    with st.container():
+        selected = cytoscape(
+            elements,
+            style_sheet,
+            height="800px",
+            layout=layout,
+            key="graph",
+            selection_type="single",
+            min_zoom=0.5,
+            max_zoom=1
+        )
+    # ノード情報の高速検索用辞書（センター以外）
+    element_dict = {str(f"{e['data']['id']}"): e for e in elements if e["data"]["id"] != "center"}
+    # 論文情報を paper_id でマッピング（ここでは PaperFields の paper_id と対応付け）
+    papers_dict = {str(f"paper_{p.paper_id}"): p for p in papers.papers}
+    
+    return selected, element_dict, papers_dict
+
+def get_selected_papers(selected, element_dict, papers_dict):
+    """
+    選択されたノードから論文情報のリストを作成する関数
+    """
+    selected_papers = []
+    if selected and "nodes" in selected:
+        for node_id in selected["nodes"]:
+            if node_id == "center":
+                continue
+            node_papers = papers_dict.get(node_id)
+            node_elem = element_dict.get(node_id)
+            if not node_papers:
+                print("why")
+                continue
+            selected_papers.append({
+                "title": node_papers.title,
+                "abstract": node_papers.abstract,
+                "url": node_papers.url,
+                "paper_id": node_papers.paper_id,
+                "relatedness": node_elem["data"]["relatedness"],
+            #    "relatedness": getattr(paper, "relatedness", 0),  # 存在しない場合は0とする例
+            #    "university": getattr(paper, "university", "不明"),
+            #    "url": paper.url,
+            #    "abstract": paper.abstract,
+            })
+    return selected_papers
+```
+
+### File: streamlit_app/ui/result_summary.py
+
+```python
+# ui/result_summary.py
+import streamlit as st
+import plotly.express as px
+import pandas as pd
+from utils.field_colors import get_field_color
+
+def render__paper_info_analysis(fields):
+    if not fields:
+        st.warning("データがありません。")
+        return
+
+    total_score = sum(field.score for field in fields)
+    data = [
+        {"name": field.name, "score": field.score, "percentage": 100 * field.score / total_score}
+        for field in fields
+    ]
+    df = pd.DataFrame(data).copy().sort_values("percentage", ascending=False)
+    sorted_names = df["name"].tolist()
+
+    color_map = {name: get_field_color(name) for name in df["name"]}
+
+    fig = px.pie(
+        df,
+        names="name",
+        values="percentage",
+        title="各分野の割合（多い順・時計回り）",
+        category_orders={"name": sorted_names},
+        color="name",
+        color_discrete_map=color_map,
+    )
+    fig.update_traces(direction="clockwise")
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_paper_analysis_result(result):
+    data = {}
+    if result.title:
+        data["タイトル"] = result.title
+    if result.fields:
+        data["分野"] = ", ".join([f"{field.name} ({field.score})" for field in result.fields])
+    if result.target:
+        data["対象"] = result.target.ja
+    if result.methods:
+        data["手法"] = ", ".join([label.ja for label in result.methods])
+    if result.factors:
+        data["要因"] = ", ".join([label.ja for label in result.factors])
+    if result.metrics:
+        data["指標"] = ", ".join([label.ja for label in result.metrics])
+    if result.search_keywords:
+        data["検索キーワード"] = ", ".join([label.ja for label in result.search_keywords])
+    if result.main_keywords:
+        data["主要キーワード"] = ", ".join([label.ja for label in result.main_keywords])
+    
+    df = pd.DataFrame.from_dict(data, orient="index", columns=["内容"])
+    st.table(df)
+
+def render_info_paper(papers):
+    for paper in papers:
+        st.write(f"タイトル: {paper['title']}")
+        st.write(f"関連順位: {paper.get('relatedness', 0)} 位")
+        st.write(f"URL: {paper['url']}")
+        st.write(f"アブストラクト：\n {paper['abstract']}")
+        st.write("---")
+
+```
+
+### File: streamlit_app/ui/search_bar.py
+
+```python
+# ui/search_bar.py
+
+import streamlit as st
+from core import paper_service, llm_service
+from state import state_manager
+
+def render_search_section():
+    st.radio(
+        "検索モード選択:",
+        ("キーワード検索", "AI検索 1", "AI検索 2"),
+        horizontal=True,
+        key="search_mode"
+    )
+
+    st.caption(
+        '※ キーワード検索 : 指定されたキーワードで検索を行います。（例：「genarative ai transformer」）',
+        unsafe_allow_html=True
+    )
+    st.caption(
+        '※ AI検索 1 : 入力された文章から関連度の高い論文を自動で解析し検索します。（例：「～～に関する論文が知りたい」）',
+        unsafe_allow_html=True
+    )
+    st.caption(
+        '※ AI検索 2 : 論文で論文を検索する場合は「(論文タイトル),(論文アブストラクト)」の形式にしてください。',
+        unsafe_allow_html=True
+    )
+
+    input_col, search_button = st.columns([8, 2])
+
+    with input_col:
+        st.text_area("入力:", value="", placeholder="ここに入力...", key="first_user_input")
+
+    with search_button:
+        if st.button("検索実行"):
+            query = st.session_state["first_user_input"]
+            mode = st.session_state["search_mode"]
+            engine = st.session_state["search_engine"]
+            year_range = st.session_state["year_range"]
+            num_papers = st.session_state["num_search_papers"]
+
+            if mode == "キーワード検索":
+                results = paper_service.fetch_papers_by_query(query, year_range, num_papers)
+                state_manager.update_paper_results(results)
+
+            elif mode == "AI検索 2":
+                analysis = llm_service.analyze_user_paper(query)
+                state_manager.update_user_input_analysis(analysis)
+                ai_query = analysis.search_keywords[0].en
+                results = paper_service.fetch_papers_by_query(ai_query, year_range, num_papers)
+                state_manager.update_paper_results(results)
+
+def render_search_info_selection_section():
+    with st.expander("オプション設定"):
+        search_num_col, year_col, search_engine_col = st.columns([1, 1, 1])
+
+        with search_num_col:
+            st.slider(
+                "検索する論文数",
+                1,
+                50,
+                st.session_state["num_search_papers"],
+                key="num_search_papers",
+            )
+        with year_col:
+            st.slider(
+                "発行年の範囲",
+                1970,
+                2025,
+                st.session_state["year_range"],
+                key="year_range",
+            )
+        with search_engine_col:
+            st.radio(
+                "検索エンジン選択:",
+                ("semantic scholar", "Google Scholar"),
+                horizontal=True,
+                key="search_engine",
+            )
+
+
+```
+
+### File: streamlit_app/core/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/core/data_models.py
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PaperField:
+    name: str
+    score: float
+
+@dataclass
+class Label:
+    ja: str
+    en: str
+
+@dataclass
+class PaperAnalysisResult:
+    fields: List[PaperField]
+    target: Label
+    title: Optional[str] = None
+    methods: Optional[List[Label]] = None
+    factors: Optional[List[Label]] = None
+    metrics: Optional[List[Label]] = None
+    search_keywords: Optional[List[Label]] = None
+    main_keywords: Optional[List[Label]] = None
+
+@dataclass
+class PaperInfo:
+    title: str
+    abstract: Optional[str]
+    url: str
+    paper_id: str
+    relatedness: Optional[int] = None
+
+@dataclass
+class PaperResult:
+    papers: List[PaperInfo] = field(default_factory=list)
+
+```
+
+### File: streamlit_app/core/llm_service.py
+
+```python
+# core/llm_service.py
+
+from core.data_models import PaperAnalysisResult, PaperField, Label
+from api import ollama_api, lm_studio_api
+from utils import config
+
+def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+```
+
+### File: streamlit_app/core/paper_service.py
+
+```python
+# 論文APIへのアクセスロジック
+# core/paper_service.py
+
+from core.data_models import PaperResult, PaperInfo
+from api.paper_api import search_papers_semantic
+from typing import Tuple
+
+def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
+    year_from, year_to = year_range
+    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+    
+    papers = [
+        PaperInfo(
+            title=paper["title"],
+            abstract=paper.get("abstract"),
+            url=paper["url"],
+            paper_id=paper["paperId"]
+        )
+        for paper in raw_papers
+    ]
+    return PaperResult(papers=papers)
+
+```
+
+### File: streamlit_app/state/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/state/state_manager.py
+
+```python
+# state/state_manager.py
+
+import streamlit as st
+from core.data_models import PaperResult, PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    defaults = {
+        "search_mode": "キーワード検索",
+        "first_user_input": "",
+        "papers": PaperResult(),
+        "user_input_analysis": None,
+        "paper_analysis": None,
+        "num_search_papers": 10,
+        "year_range": (2023, 2025),
+        "search_engine": "semantic scholar",
+        "selected_paper": [],
+        "prev_selected_nodes": [],
+        "chat_history": [{"role": "system", "content": config.system_prompt}],
+        "initial_prompt_processed": True,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+def reset_chat_history():
+    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+    st.session_state["initial_prompt_processed"] = False
+
+def update_selected_paper(selected_paper):
+    st.session_state["selected_paper"] = selected_paper
+    #st.session_state["initial_prompt_processed"] = False
+
+def update_paper_results(papers: PaperResult):
+    st.session_state["papers"] = papers
+
+def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
+    st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
+
+def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
+    st.session_state["num_search_papers"] = num_search_papers
+    st.session_state["year_range"] = year_range
+    st.session_state["search_engine"] = search_engine
+
+```
+
+### File: streamlit_app/state/state_manager_back.py
+
+```python
+# state_manager.py
+import streamlit as st
+#from utils.paper_controller import PaperResult
+from core.data_models import PaperResult
+from utils.llm_controller import PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    # 検索モードと入力値
+    if "search_mode" not in st.session_state:
+        st.session_state["search_mode"] = "キーワード検索"
+    if "first_user_input" not in st.session_state:
+        st.session_state["first_user_input"] = ""
+    
+    # 論文検索結果
+    if "papers" not in st.session_state:
+        st.session_state["papers"] = PaperResult()
+    
+    # ユーザー入力解析結果
+    if "user_input_analysis" not in st.session_state:
+        st.session_state["user_input_analysis"] = None
+
+    # 検索に関するオプション
+    if "num_search_papers" not in st.session_state:
+        st.session_state["num_search_papers"] = 10
+    if "year_range" not in st.session_state:
+        st.session_state["year_range"] = (2023, 2025)
+    if "search_engine" not in st.session_state:
+        st.session_state["search_engine"] = "semantic scholar"
+
+    # ネットワークで選択された論文
+    if "selected_paper" not in st.session_state:
+        st.session_state["selected_paper"] = []
+
+    # 論文表示のための1つ前の論文保存用
+    if "prev_selected_nodes" not in st.session_state:
+        st.session_state["prev_selected_nodes"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+        st.session_state["initial_prompt_processed"] = True
 ```
 
 ### File: streamlit_app/temp/.gitkeep
@@ -2210,118 +2225,105 @@ if __name__ == "__main__":
     print("abstract:", data.paper[0].abstract)
 ```
 
-### File: streamlit_app/state/__init__.py
+### File: react_app/backend/Dockerfile
 
-```python
+```
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ```
 
-### File: streamlit_app/state/state_manager.py
+### File: react_app/backend/main.py
 
 ```python
-# state/state_manager.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-import streamlit as st
-from core.data_models import PaperResult, PaperAnalysisResult
-from utils import config
+app = FastAPI()
 
-def initialize_session_state():
-    defaults = {
-        "search_mode": "キーワード検索",
-        "first_user_input": "",
-        "papers": PaperResult(),
-        "user_input_analysis": None,
-        "paper_analysis": None,
-        "num_search_papers": 10,
-        "year_range": (2023, 2025),
-        "search_engine": "semantic scholar",
-        "selected_paper": [],
-        "prev_selected_nodes": [],
-        "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True,
-    }
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+@app.get("/health")
+async def health_check():
+    """ヘルスチェック用エンドポイント"""
+    return {"status": "ok"}
 
-def reset_chat_history():
-    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-    st.session_state["initial_prompt_processed"] = False
-
-def update_selected_paper(selected_paper):
-    st.session_state["selected_paper"] = selected_paper
-    #st.session_state["initial_prompt_processed"] = False
-
-def update_paper_results(papers: PaperResult):
-    st.session_state["papers"] = papers
-
-def update_user_input_analysis(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    user_input_analysis
-    に保存
-    """
-    st.session_state["user_input_analysis"] = analysis
-
-def update_user_results(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    paper_analysis
-    に保存
-    """
-    st.session_state["paper_analysis"] = analysis
-
-def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
-    st.session_state["num_search_papers"] = num_search_papers
-    st.session_state["year_range"] = year_range
-    st.session_state["search_engine"] = search_engine
 
 ```
 
-### File: streamlit_app/state/state_manager_back.py
+### File: react_app/backend/requirements.txt
 
-```python
-# state_manager.py
-import streamlit as st
-#from utils.paper_controller import PaperResult
-from core.data_models import PaperResult
-from utils.llm_controller import PaperAnalysisResult
-from utils import config
+```
+fastapi
+uvicorn
 
-def initialize_session_state():
-    # 検索モードと入力値
-    if "search_mode" not in st.session_state:
-        st.session_state["search_mode"] = "キーワード検索"
-    if "first_user_input" not in st.session_state:
-        st.session_state["first_user_input"] = ""
-    
-    # 論文検索結果
-    if "papers" not in st.session_state:
-        st.session_state["papers"] = PaperResult()
-    
-    # ユーザー入力解析結果
-    if "user_input_analysis" not in st.session_state:
-        st.session_state["user_input_analysis"] = None
+```
 
-    # 検索に関するオプション
-    if "num_search_papers" not in st.session_state:
-        st.session_state["num_search_papers"] = 10
-    if "year_range" not in st.session_state:
-        st.session_state["year_range"] = (2023, 2025)
-    if "search_engine" not in st.session_state:
-        st.session_state["search_engine"] = "semantic scholar"
+### File: react_app/temp/.gitkeep
 
-    # ネットワークで選択された論文
-    if "selected_paper" not in st.session_state:
-        st.session_state["selected_paper"] = []
+```
 
-    # 論文表示のための1つ前の論文保存用
-    if "prev_selected_nodes" not in st.session_state:
-        st.session_state["prev_selected_nodes"] = []
+```
 
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-        st.session_state["initial_prompt_processed"] = True
+### File: react_app/frontend/Dockerfile
+
+```
+FROM node:18
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . /app
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
+```
+
+### File: react_app/frontend/next-env.d.ts
+
+```
+/// <reference types="next" />
+/// <reference types="next/types/global" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information.
+
+```
+
+### File: react_app/frontend/next.config.js
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+
+module.exports = nextConfig
+
+```
+
+### File: react_app/frontend/pages/index.tsx
+
+```
+import { Button } from '@mui/material';
+
+export default function Home() {
+  return (
+    <div>
+      <h1>Paper Search Frontend</h1>
+      <Button variant="contained">Hello</Button>
+    </div>
+  );
+}
+
 ```
 

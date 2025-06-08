@@ -90,6 +90,9 @@ docker-compose up streamlit
 docker-compose up frontend backend
 ```
 Next.js は http://localhost:3000 で起動します。
+`frontend` サービスでは `/app/node_modules` を名前付きボリュームにマウントして
+います。これによりビルド時にインストールされた `next` コマンドがホスト側の
+ボリュームで上書きされず、開発時にエラーが発生しません。
 
 ### すべてのサービスを起動
 ```bash
