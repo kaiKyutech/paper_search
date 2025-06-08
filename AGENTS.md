@@ -65,3 +65,12 @@ paper_search/
 ## テスト
 - テストコードが存在する場合は `pytest` を実行すること
 - テストが無い場合は `pytest` 実行結果が `no tests ran` であっても問題ない
+
+## React フロントエンド開発フロー
+- Next.js プロジェクトは `npx create-next-app` で作成する。
+- `docker-compose.yml` と `frontend/Dockerfile` を利用し、依存ライブラリはコンテナ内で管理する。
+- `docker-compose up frontend backend` で開発用コンテナを起動し、ホットリロードで動作確認を行う。
+- ライブラリを追加するときは `docker-compose exec frontend sh` でコンテナに入り、`npm install` を実行する。
+- 追加後は `docker-compose build frontend` を実行してイメージを更新する。
+- `node_modules` は匿名ボリューム `/app/node_modules` に置くことでホスト側に作成しない。
+- コードを保存すると即座に画面に反映されるよう `volumes` を設定する。
