@@ -8,12 +8,16 @@ services:
     container_name: streamlit_app
     extra_hosts:
       - host.docker.internal:host-gateway
+    volumes:
+      - ./streamlit_app:/app
   backend:
     build:
       context: ./react_app/backend
     ports:
       - "8000:8000"
     container_name: fastapi_backend
+    volumes:
+      - ./react_app/backend:/app
   frontend:
     build:
       context: ./react_app/frontend
@@ -22,3 +26,5 @@ services:
     container_name: react_frontend
     depends_on:
       - backend
+    volumes:
+      - ./react_app/frontend:/app
