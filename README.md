@@ -22,7 +22,7 @@
 1. リポジトリ直下で以下を実行し、必要なサービスを起動します。
    ```bash
    # すべてのサービスを起動する例
-   docker-compose up
+   docker-compose up --build
    ```
    それぞれ個別に起動したい場合はサービス名を指定してください。
    - Streamlit アプリのみ: `docker-compose up streamlit`
