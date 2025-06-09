@@ -90,14 +90,8 @@ const ResultsPage: React.FC = () => {
 
   return (
     <div className="flex">
-      {drawerOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-10 z-30 transition-opacity duration-300"
-          onClick={toggleDrawer}
-        ></div>
-      )}
       <div
-        className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <nav className="p-4 space-y-2">
           {drawerItems.map((item, index) => {
