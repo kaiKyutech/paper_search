@@ -100,7 +100,7 @@ const PaperSearchApp: React.FC = () => {
     <div className="flex">
       {drawerOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-30 transition-opacity duration-300"
+          className="fixed inset-0 bg-black bg-opacity-10 z-30 transition-opacity duration-300"
           onClick={toggleDrawer}
         ></div>
       )}
