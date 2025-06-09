@@ -10,7 +10,7 @@ paper_search/
 │   │   ├── main.py
 │   │   └── requirements.txt
 │   └── frontend
-│       ├── .dockerignore
+│       ├── .next
 │       ├── Dockerfile
 │       ├── app
 │       │   ├── favicon.ico
@@ -26,38 +26,39 @@ paper_search/
 │           ├── next.svg
 │           ├── vercel.svg
 │           └── window.svg
-└── streamlit_app
-    ├── Dockerfile
-    ├── __init__.py
-    ├── api
-    │   ├── __init__.py
-    │   ├── lm_studio_api.py
-    │   ├── ollama_api.py
-    │   └── paper_api.py
-    ├── app.py
-    ├── core
-    │   ├── __init__.py
-    │   ├── data_models.py
-    │   ├── llm_service.py
-    │   └── paper_service.py
-    ├── requirements.txt
-    ├── state
-    │   ├── __init__.py
-    │   ├── state_manager.py
-    │   └── state_manager_back.py
-    ├── ui
-    │   ├── __init__.py
-    │   ├── chat_panel.py
-    │   ├── paper_network.py
-    │   ├── result_summary.py
-    │   └── search_bar.py
-    └── utils
-        ├── __init__.py
-        ├── config.py
-        ├── cytoscape_utils.py
-        ├── field_colors.py
-        ├── llm_controller.py
-        └── paper_controller.py
+├── streamlit_app
+│   ├── Dockerfile
+│   ├── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── lm_studio_api.py
+│   │   ├── ollama_api.py
+│   │   └── paper_api.py
+│   ├── app.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── data_models.py
+│   │   ├── llm_service.py
+│   │   └── paper_service.py
+│   ├── requirements.txt
+│   ├── state
+│   │   ├── __init__.py
+│   │   ├── state_manager.py
+│   │   └── state_manager_back.py
+│   ├── ui
+│   │   ├── __init__.py
+│   │   ├── chat_panel.py
+│   │   ├── paper_network.py
+│   │   ├── result_summary.py
+│   │   └── search_bar.py
+│   └── utils
+│       ├── __init__.py
+│       ├── config.py
+│       ├── cytoscape_utils.py
+│       ├── field_colors.py
+│       ├── llm_controller.py
+│       └── paper_controller.py
+└── tools
 ```
 
 ### File: AGENTS.md
@@ -72,8 +73,6 @@ paper_search/
 ├── AGENTS.md
 ├── README.md
 ├── docker-compose.yml
-├── pulling_files.py
-├── project_export.md
 ├── react_app
 │   ├── backend
 │   │   ├── Dockerfile
@@ -83,39 +82,59 @@ paper_search/
 │   └── frontend
 │       ├── Dockerfile
 │       ├── README.md
-│       ├── package.json
-│       └── src
-│           └── main.tsx
-└── streamlit_app
-    ├── Dockerfile
-    ├── README.md
-    ├── api
-    │   ├── lm_studio_api.py
-    │   ├── ollama_api.py
-    │   └── paper_api.py
-    ├── app.py
-    ├── core
-    │   ├── data_models.py
-    │   ├── llm_service.py
-    │   └── paper_service.py
-    ├── requirements.txt
-    ├── state
-    │   ├── state_manager.py
-    │   └── state_manager_back.py
-    ├── ui
-    │   ├── chat_panel.py
-    │   ├── paper_network.py
-    │   ├── result_summary.py
-    │   └── search_bar.py
-    └── utils
-        ├── config.py
-        ├── cytoscape_utils.py
-        ├── field_colors.py
-        ├── llm_controller.py
-        └── paper_controller.py
+│       ├── app
+│       │   ├── favicon.ico
+│       │   ├── globals.css
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       ├── eslint.config.mjs
+│       ├── next.config.ts
+│       ├── postcss.config.mjs
+│       └── public
+│           ├── file.svg
+│           ├── globe.svg
+│           ├── next.svg
+│           ├── vercel.svg
+│           └── window.svg
+├── streamlit_app
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── lm_studio_api.py
+│   │   ├── ollama_api.py
+│   │   └── paper_api.py
+│   ├── app.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── data_models.py
+│   │   ├── llm_service.py
+│   │   └── paper_service.py
+│   ├── requirements.txt
+│   ├── state
+│   │   ├── __init__.py
+│   │   ├── state_manager.py
+│   │   └── state_manager_back.py
+│   ├── ui
+│   │   ├── __init__.py
+│   │   ├── chat_panel.py
+│   │   ├── paper_network.py
+│   │   ├── result_summary.py
+│   │   └── search_bar.py
+│   └── utils
+│       ├── __init__.py
+│       ├── config.py
+│       ├── cytoscape_utils.py
+│       ├── field_colors.py
+│       ├── llm_controller.py
+│       └── paper_controller.py
+└── tools
+    ├── project_tree.py
+    └── pulling_files.py
 ```
 
-新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。構成の確認には `python tools/project_tree.py` を利用するとディレクトリ構成のみを簡潔に表示できます。詳細な一覧が必要な場合は `python tools/pulling_files.py` を実行してください。いずれのスクリプトも `.gitignore` と `.dockerignore` を参照して不要なファイルを除外します。
 
 ## 開発規約
 - 使用言語は **Python** とする
@@ -126,6 +145,7 @@ paper_search/
   - 変数名・関数名は `snake_case`
 - コメントおよび docstring は日本語で記述する
 - Pull Request の本文も日本語で作成する
+- tempフォルダには参考にしてほしいファイルが入っていることがあります。指示があれば確認をしてください。
 
 ## テスト
 - テストコードが存在する場合は `pytest` を実行すること
@@ -223,12 +243,6 @@ uvicorn
 
 ```
 
-### File: react_app/frontend/.dockerignore
-
-```
-node_modules
-```
-
 ### File: react_app/frontend/Dockerfile
 
 ```
@@ -290,36 +304,6 @@ const config = {
 
 export default config;
 
-```
-
-### File: react_app/frontend/public/file.svg
-
-```
-<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
-```
-
-### File: react_app/frontend/public/globe.svg
-
-```
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
-```
-
-### File: react_app/frontend/public/next.svg
-
-```
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
-```
-
-### File: react_app/frontend/public/vercel.svg
-
-```
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
-```
-
-### File: react_app/frontend/public/window.svg
-
-```
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
 ```
 
 ### File: react_app/frontend/app/favicon.ico
@@ -507,6 +491,36 @@ export default function Home() {
   );
 }
 
+```
+
+### File: react_app/frontend/public/file.svg
+
+```
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+```
+
+### File: react_app/frontend/public/globe.svg
+
+```
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+```
+
+### File: react_app/frontend/public/next.svg
+
+```
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+```
+
+### File: react_app/frontend/public/vercel.svg
+
+```
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+```
+
+### File: react_app/frontend/public/window.svg
+
+```
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
 ```
 
 ### File: streamlit_app/Dockerfile
@@ -736,6 +750,121 @@ st-cytoscape==0.0.5
 jsonschema
 python-dotenv
 
+```
+
+### File: streamlit_app/state/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/state/state_manager.py
+
+```python
+# state/state_manager.py
+
+import streamlit as st
+from core.data_models import PaperResult, PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    defaults = {
+        "search_mode": "キーワード検索",
+        "first_user_input": "",
+        "papers": PaperResult(),
+        "user_input_analysis": None,
+        "paper_analysis": None,
+        "num_search_papers": 10,
+        "year_range": (2023, 2025),
+        "search_engine": "semantic scholar",
+        "selected_paper": [],
+        "prev_selected_nodes": [],
+        "chat_history": [{"role": "system", "content": config.system_prompt}],
+        "initial_prompt_processed": True,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+def reset_chat_history():
+    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+    st.session_state["initial_prompt_processed"] = False
+
+def update_selected_paper(selected_paper):
+    st.session_state["selected_paper"] = selected_paper
+    #st.session_state["initial_prompt_processed"] = False
+
+def update_paper_results(papers: PaperResult):
+    st.session_state["papers"] = papers
+
+def update_user_input_analysis(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    user_input_analysis
+    に保存
+    """
+    st.session_state["user_input_analysis"] = analysis
+
+def update_user_results(analysis: PaperAnalysisResult):
+    """
+    analysis情報を
+    paper_analysis
+    に保存
+    """
+    st.session_state["paper_analysis"] = analysis
+
+def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
+    st.session_state["num_search_papers"] = num_search_papers
+    st.session_state["year_range"] = year_range
+    st.session_state["search_engine"] = search_engine
+
+```
+
+### File: streamlit_app/state/state_manager_back.py
+
+```python
+# state_manager.py
+import streamlit as st
+#from utils.paper_controller import PaperResult
+from core.data_models import PaperResult
+from utils.llm_controller import PaperAnalysisResult
+from utils import config
+
+def initialize_session_state():
+    # 検索モードと入力値
+    if "search_mode" not in st.session_state:
+        st.session_state["search_mode"] = "キーワード検索"
+    if "first_user_input" not in st.session_state:
+        st.session_state["first_user_input"] = ""
+    
+    # 論文検索結果
+    if "papers" not in st.session_state:
+        st.session_state["papers"] = PaperResult()
+    
+    # ユーザー入力解析結果
+    if "user_input_analysis" not in st.session_state:
+        st.session_state["user_input_analysis"] = None
+
+    # 検索に関するオプション
+    if "num_search_papers" not in st.session_state:
+        st.session_state["num_search_papers"] = 10
+    if "year_range" not in st.session_state:
+        st.session_state["year_range"] = (2023, 2025)
+    if "search_engine" not in st.session_state:
+        st.session_state["search_engine"] = "semantic scholar"
+
+    # ネットワークで選択された論文
+    if "selected_paper" not in st.session_state:
+        st.session_state["selected_paper"] = []
+
+    # 論文表示のための1つ前の論文保存用
+    if "prev_selected_nodes" not in st.session_state:
+        st.session_state["prev_selected_nodes"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
+        st.session_state["initial_prompt_processed"] = True
 ```
 
 ### File: streamlit_app/utils/__init__.py
@@ -1593,250 +1722,6 @@ if __name__ == "__main__":
     print("abstract:", data.paper[0].abstract)
 ```
 
-### File: streamlit_app/state/__init__.py
-
-```python
-
-```
-
-### File: streamlit_app/state/state_manager.py
-
-```python
-# state/state_manager.py
-
-import streamlit as st
-from core.data_models import PaperResult, PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    defaults = {
-        "search_mode": "キーワード検索",
-        "first_user_input": "",
-        "papers": PaperResult(),
-        "user_input_analysis": None,
-        "paper_analysis": None,
-        "num_search_papers": 10,
-        "year_range": (2023, 2025),
-        "search_engine": "semantic scholar",
-        "selected_paper": [],
-        "prev_selected_nodes": [],
-        "chat_history": [{"role": "system", "content": config.system_prompt}],
-        "initial_prompt_processed": True,
-    }
-
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-def reset_chat_history():
-    st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-    st.session_state["initial_prompt_processed"] = False
-
-def update_selected_paper(selected_paper):
-    st.session_state["selected_paper"] = selected_paper
-    #st.session_state["initial_prompt_processed"] = False
-
-def update_paper_results(papers: PaperResult):
-    st.session_state["papers"] = papers
-
-def update_user_input_analysis(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    user_input_analysis
-    に保存
-    """
-    st.session_state["user_input_analysis"] = analysis
-
-def update_user_results(analysis: PaperAnalysisResult):
-    """
-    analysis情報を
-    paper_analysis
-    に保存
-    """
-    st.session_state["paper_analysis"] = analysis
-
-def update_search_settings(num_search_papers: int, year_range: tuple, search_engine: str):
-    st.session_state["num_search_papers"] = num_search_papers
-    st.session_state["year_range"] = year_range
-    st.session_state["search_engine"] = search_engine
-
-```
-
-### File: streamlit_app/state/state_manager_back.py
-
-```python
-# state_manager.py
-import streamlit as st
-#from utils.paper_controller import PaperResult
-from core.data_models import PaperResult
-from utils.llm_controller import PaperAnalysisResult
-from utils import config
-
-def initialize_session_state():
-    # 検索モードと入力値
-    if "search_mode" not in st.session_state:
-        st.session_state["search_mode"] = "キーワード検索"
-    if "first_user_input" not in st.session_state:
-        st.session_state["first_user_input"] = ""
-    
-    # 論文検索結果
-    if "papers" not in st.session_state:
-        st.session_state["papers"] = PaperResult()
-    
-    # ユーザー入力解析結果
-    if "user_input_analysis" not in st.session_state:
-        st.session_state["user_input_analysis"] = None
-
-    # 検索に関するオプション
-    if "num_search_papers" not in st.session_state:
-        st.session_state["num_search_papers"] = 10
-    if "year_range" not in st.session_state:
-        st.session_state["year_range"] = (2023, 2025)
-    if "search_engine" not in st.session_state:
-        st.session_state["search_engine"] = "semantic scholar"
-
-    # ネットワークで選択された論文
-    if "selected_paper" not in st.session_state:
-        st.session_state["selected_paper"] = []
-
-    # 論文表示のための1つ前の論文保存用
-    if "prev_selected_nodes" not in st.session_state:
-        st.session_state["prev_selected_nodes"] = []
-
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = [{"role": "system", "content": config.system_prompt}]
-        st.session_state["initial_prompt_processed"] = True
-```
-
-### File: streamlit_app/core/__init__.py
-
-```python
-
-```
-
-### File: streamlit_app/core/data_models.py
-
-```python
-from dataclasses import dataclass, field
-from typing import List, Optional
-
-@dataclass
-class PaperField:
-    name: str
-    score: float
-
-@dataclass
-class Label:
-    ja: str
-    en: str
-
-@dataclass
-class PaperAnalysisResult:
-    fields: List[PaperField]
-    target: Label
-    title: Optional[str] = None
-    methods: Optional[List[Label]] = None
-    factors: Optional[List[Label]] = None
-    metrics: Optional[List[Label]] = None
-    search_keywords: Optional[List[Label]] = None
-    main_keywords: Optional[List[Label]] = None
-
-@dataclass
-class PaperInfo:
-    title: str
-    abstract: Optional[str]
-    url: str
-    paper_id: str
-    relatedness: Optional[int] = None
-
-@dataclass
-class PaperResult:
-    papers: List[PaperInfo] = field(default_factory=list)
-
-```
-
-### File: streamlit_app/core/llm_service.py
-
-```python
-# core/llm_service.py
-
-from core.data_models import PaperAnalysisResult, PaperField, Label
-from api import ollama_api, lm_studio_api
-from utils import config
-
-def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
-    prompt = config.experiment_message_without_paper + input_text
-    
-    if api_type == "ollama":
-        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
-    elif api_type == "lm_studio":
-        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
-        messages = [{"role": "user", "content": prompt}]
-        data = lm_studio_api.get_structured_response(client, "my-model", messages)
-    else:
-        raise ValueError("Unsupported API type provided.")
-
-    return PaperAnalysisResult(
-        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
-        target=Label(**data["labels"]["target"]),
-        title=data.get("title"),
-        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
-        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
-        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
-        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
-    )
-
-```
-
-### File: streamlit_app/core/paper_service.py
-
-```python
-# 論文APIへのアクセスロジック
-# core/paper_service.py
-
-from core.data_models import PaperResult, PaperInfo
-from api.paper_api import search_papers_semantic
-from typing import Tuple
-
-def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
-    year_from, year_to = year_range
-    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
-    
-    papers = [
-        PaperInfo(
-            title=paper["title"],
-            abstract=paper.get("abstract"),
-            url=paper["url"],
-            paper_id=paper["paperId"]
-        )
-        for paper in raw_papers
-    ]
-    return PaperResult(papers=papers)
-
-```
-
 ### File: streamlit_app/ui/__init__.py
 
 ```python
@@ -2184,6 +2069,135 @@ def render_search_info_selection_section():
                 key="search_engine",
             )
 
+
+```
+
+### File: streamlit_app/core/__init__.py
+
+```python
+
+```
+
+### File: streamlit_app/core/data_models.py
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PaperField:
+    name: str
+    score: float
+
+@dataclass
+class Label:
+    ja: str
+    en: str
+
+@dataclass
+class PaperAnalysisResult:
+    fields: List[PaperField]
+    target: Label
+    title: Optional[str] = None
+    methods: Optional[List[Label]] = None
+    factors: Optional[List[Label]] = None
+    metrics: Optional[List[Label]] = None
+    search_keywords: Optional[List[Label]] = None
+    main_keywords: Optional[List[Label]] = None
+
+@dataclass
+class PaperInfo:
+    title: str
+    abstract: Optional[str]
+    url: str
+    paper_id: str
+    relatedness: Optional[int] = None
+
+@dataclass
+class PaperResult:
+    papers: List[PaperInfo] = field(default_factory=list)
+
+```
+
+### File: streamlit_app/core/llm_service.py
+
+```python
+# core/llm_service.py
+
+from core.data_models import PaperAnalysisResult, PaperField, Label
+from api import ollama_api, lm_studio_api
+from utils import config
+
+def analyze_user_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+def analyze_searched_paper(input_text: str, api_type: str = "ollama") -> PaperAnalysisResult:
+    prompt = config.experiment_message_without_paper + input_text
+    
+    if api_type == "ollama":
+        data = ollama_api.get_structured_response_v2(config.OLLAMA_MODEL, prompt)
+    elif api_type == "lm_studio":
+        client = lm_studio_api.OpenAI(base_url="http://192.168.11.26:1234/v1", api_key="lm_studio")
+        messages = [{"role": "user", "content": prompt}]
+        data = lm_studio_api.get_structured_response(client, "my-model", messages)
+    else:
+        raise ValueError("Unsupported API type provided.")
+
+    return PaperAnalysisResult(
+        fields=[PaperField(name=f["name"], score=f["score"]) for f in data["fields"]],
+        target=Label(**data["labels"]["target"]),
+        title=data.get("title"),
+        methods=[Label(**m) for m in data["labels"]["approaches"]["methods"]],
+        factors=[Label(**f) for f in data["labels"]["approaches"]["factors"]],
+        metrics=[Label(**m) for m in data["labels"]["approaches"]["metrics"]],
+        search_keywords=[Label(**kw) for kw in data["labels"]["search_keywords"]]
+    )
+
+```
+
+### File: streamlit_app/core/paper_service.py
+
+```python
+# 論文APIへのアクセスロジック
+# core/paper_service.py
+
+from core.data_models import PaperResult, PaperInfo
+from api.paper_api import search_papers_semantic
+from typing import Tuple
+
+def fetch_papers_by_query(query: str, year_range: Tuple[int, int], limit: int = 10) -> PaperResult:
+    year_from, year_to = year_range
+    raw_papers = search_papers_semantic(query, year_from=year_from, year_to=year_to, limit=limit)
+    
+    papers = [
+        PaperInfo(
+            title=paper["title"],
+            abstract=paper.get("abstract"),
+            url=paper["url"],
+            paper_id=paper["paperId"]
+        )
+        for paper in raw_papers
+    ]
+    return PaperResult(papers=papers)
 
 ```
 
