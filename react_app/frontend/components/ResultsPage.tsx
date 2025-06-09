@@ -113,7 +113,13 @@ const ResultsPage: React.FC = () => {
         </nav>
       </div>
 
-      <div className="flex flex-col flex-grow min-h-screen bg-gray-50">
+      <div
+        className="flex flex-col flex-grow min-h-screen bg-gray-50 transition-all duration-300"
+        style={{
+          marginLeft: drawerOpen ? "18rem" : 0,
+          width: drawerOpen ? "calc(100% - 18rem)" : "100%",
+        }}
+      >
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
           <div className="flex items-center px-4 py-3">
             <button onClick={toggleDrawer} className="mr-4 p-2 rounded-full hover:bg-gray-100 text-gray-600">
@@ -155,9 +161,7 @@ const ResultsPage: React.FC = () => {
           }
         `}</style>
 
-        <main className={`flex-grow transition-all duration-300 ${drawerOpen ? "ml-72" : ""}`}
-          style={{ width: drawerOpen ? "calc(100% - 18rem)" : "100%" }}
-        >
+        <main className="flex-grow transition-all duration-300">
           <div className="max-w-4xl mx-auto px-4 mt-6">
             {sortDropdownOpen && (
               <div className="fixed inset-0 z-30" onClick={() => setSortDropdownOpen(false)}></div>
