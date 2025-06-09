@@ -7,6 +7,8 @@ paper_search/
 ├── AGENTS.md
 ├── README.md
 ├── docker-compose.yml
+├── docs
+│   └── migration_plan.md
 ├── react_app
 │   ├── backend
 │   │   ├── Dockerfile
