@@ -20,17 +20,24 @@ paper_search/
 │       │   ├── favicon.ico
 │       │   ├── globals.css
 │       │   ├── layout.tsx
-│       │   └── page.tsx
-<<<<<<< HEAD
+│       │   ├── page.tsx
+│       │   └── results
+│       │       └── page.tsx
+│       ├── components
+│       │   ├── ResultsPage.tsx
+│       │   └── SearchPage.tsx
 │       ├── eslint.config.mjs
 │       ├── next.config.ts
 │       ├── postcss.config.mjs
-│       └── public
-│           ├── file.svg
-│           ├── globe.svg
-│           ├── next.svg
-│           ├── vercel.svg
-│           └── window.svg
+│       ├── public
+│       │   ├── file.svg
+│       │   ├── globe.svg
+│       │   ├── next.svg
+│       │   ├── vercel.svg
+│       │   └── window.svg
+│       ├── package.json
+│       ├── package-lock.json
+│       └── tsconfig.json
 ├── streamlit_app
 │   ├── Dockerfile
 │   ├── README.md
@@ -64,48 +71,12 @@ paper_search/
 │       ├── field_colors.py
 │       ├── llm_controller.py
 │       └── paper_controller.py
+├── temp
+│   └── paper-search-ui.tsx
 └── tools
     ├── project_tree.py
     └── pulling_files.py
-=======
-│       ├── components
-│       │   └── PaperSearchApp.tsx
-│       ├── package.json
-│       ├── package-lock.json
-│       ├── eslint.config.mjs
-│       ├── next.config.ts
-│       ├── postcss.config.mjs
-│       └── tsconfig.json
-└── streamlit_app
-    ├── Dockerfile
-    ├── README.md
-    ├── api
-    │   ├── lm_studio_api.py
-    │   ├── ollama_api.py
-    │   └── paper_api.py
-    ├── app.py
-    ├── core
-    │   ├── data_models.py
-    │   ├── llm_service.py
-    │   └── paper_service.py
-    ├── requirements.txt
-    ├── state
-    │   ├── state_manager.py
-    │   └── state_manager_back.py
-    ├── ui
-    │   ├── chat_panel.py
-    │   ├── paper_network.py
-    │   ├── result_summary.py
-    │   └── search_bar.py
-    └── utils
-        ├── config.py
-        ├── cytoscape_utils.py
-        ├── field_colors.py
-        ├── llm_controller.py
-        └── paper_controller.py
->>>>>>> codex/検索文字色を黒に変更
 ```
-
 新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。構成の確認には `python tools/project_tree.py` を利用するとディレクトリ構成のみを簡潔に表示できます。詳細な一覧が必要な場合は `python tools/pulling_files.py` を実行してください。いずれのスクリプトも `.gitignore` と `.dockerignore` を参照して不要なファイルを除外します。
 
 ## 開発規約
