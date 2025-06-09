@@ -97,8 +97,38 @@ const PaperSearchApp: React.FC = () => {
   ];
 
   return (
-    <div className="flex-grow min-h-screen bg-gray-50">
-      {isSearched && (
+    <div className="flex">
+      <div
+        className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-700">メニュー</h2>
+          <button onClick={toggleDrawer} className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200">
+            <X size={20} />
+          </button>
+        </div>
+        <nav className="p-2">
+          {drawerItems.map((item, index) => {
+            const IconComponent = item.icon;
+            return (
+              <button
+                key={item.id}
+                className="w-full flex items-center px-4 py-3 text-left hover:bg-gray-100 rounded-lg transition-all duration-200 hover:translate-x-1 hover:shadow-sm"
+                style={{
+                  animationDelay: drawerOpen ? `${index * 50}ms` : '0ms',
+                  animation: drawerOpen ? 'slideInLeft 0.3s ease-out forwards' : 'none',
+                }}
+              >
+                <IconComponent className="mr-3 text-gray-600 transition-colors duration-200" size={20} />
+                <span className="text-sm text-gray-700">{item.text}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className={`flex-grow min-h-screen bg-gray-50 transition-transform duration-300 ${drawerOpen ? 'translate-x-72' : ''}`}> 
+        {isSearched && (
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
           <div className="flex items-center px-4 py-3">
             <button onClick={toggleDrawer} className="mr-4 p-2 rounded-full hover:bg-gray-100 text-gray-600">
@@ -125,32 +155,6 @@ const PaperSearchApp: React.FC = () => {
         </header>
       )}
 
-      <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-300" onClick={toggleDrawer}></div>
-        <div className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-700">メニュー</h2>
-            <button onClick={toggleDrawer} className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200">
-              <X size={20} />
-            </button>
-          </div>
-          <nav className="p-2">
-            {drawerItems.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  className="w-full flex items-center px-4 py-3 text-left hover:bg-gray-100 rounded-lg transition-all duration-200 hover:translate-x-1 hover:shadow-sm"
-                  style={{ animationDelay: drawerOpen ? `${index * 50}ms` : '0ms', animation: drawerOpen ? 'slideInLeft 0.3s ease-out forwards' : 'none' }}
-                >
-                  <IconComponent className="mr-3 text-gray-600 transition-colors duration-200" size={20} />
-                  <span className="text-sm text-gray-700">{item.text}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
 
       <style jsx>{`
         @keyframes slideInLeft {
@@ -296,6 +300,7 @@ const PaperSearchApp: React.FC = () => {
         )}
       </main>
     </div>
+  </div>
   );
 };
 
