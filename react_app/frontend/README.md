@@ -31,6 +31,8 @@ frontend:
   ports:
     - "3000:3000"
   container_name: react_frontend
+  environment:
+    - NEXT_PUBLIC_API_URL=http://backend:8000
   depends_on:
     - backend
   volumes:
