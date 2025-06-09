@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   Menu,
@@ -51,6 +51,19 @@ const ResultsPage: React.FC = () => {
   );
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -91,7 +104,8 @@ const ResultsPage: React.FC = () => {
   return (
     <div className="flex">
       <div
-        className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed left-0 h-full w-72 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
+        style={{ top: headerHeight, height: `calc(100% - ${headerHeight}px)` }}
       >
         <nav className="p-4 space-y-2">
           {drawerItems.map((item, index) => {
@@ -114,7 +128,7 @@ const ResultsPage: React.FC = () => {
       </div>
 
       <div className="flex flex-col flex-grow min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <header ref={headerRef} className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
           <div className="flex items-center px-4 py-3">
             <button onClick={toggleDrawer} className="mr-4 p-2 rounded-full hover:bg-gray-100 text-gray-600">
               <Menu size={24} />
