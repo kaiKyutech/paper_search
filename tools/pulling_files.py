@@ -85,9 +85,20 @@ def generate_markdown(root_dir, exclude_filenames=None, exclude_extensions=None,
     return markdown
 
 if __name__ == "__main__":
-    root_directory = "."
+    # スクリプトが配置されているディレクトリから1つ上をプロジェクトルートとする
+    root_directory = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")
+    )
 
-    exclude_files = [".env", ".gitignore", "README.md", "project_export.md", "llm_api.py", "pulling_files.py"]
+    exclude_files = [
+        ".env",
+        ".gitignore",
+        "README.md",
+        "project_export.md",
+        "llm_api.py",
+        "pulling_files.py",
+        "project_tree.py",
+    ]
     exclude_exts = [".pyc", ".ipynb", ".json"]
     exclude_dirs = [".git", "__pycache__"]
 

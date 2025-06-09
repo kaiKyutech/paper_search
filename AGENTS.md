@@ -7,7 +7,6 @@ paper_search/
 ├── AGENTS.md
 ├── README.md
 ├── docker-compose.yml
-├── pulling_files.py
 ├── project_export.md
 ├── react_app
 │   ├── backend
@@ -18,9 +17,19 @@ paper_search/
 │   └── frontend
 │       ├── Dockerfile
 │       ├── README.md
+│       ├── next.config.ts
 │       ├── package.json
-│       └── src
-│           └── main.tsx
+│       ├── app
+│       │   ├── favicon.ico
+│       │   ├── globals.css
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       └── public
+│           ├── file.svg
+│           ├── globe.svg
+│           ├── next.svg
+│           ├── vercel.svg
+│           └── window.svg
 └── streamlit_app
     ├── Dockerfile
     ├── README.md
@@ -48,9 +57,12 @@ paper_search/
         ├── field_colors.py
         ├── llm_controller.py
         └── paper_controller.py
+└── tools
+    ├── pulling_files.py
+    └── project_tree.py
 ```
 
-新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`tools/pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
 
 ## 開発規約
 - 使用言語は **Python** とする
