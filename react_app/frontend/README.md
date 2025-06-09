@@ -40,11 +40,11 @@ frontend:
 `/app/node_modules` を匿名ボリュームとして確保することで、ホスト側に `node_modules` フォルダが作成されないようにしています。
 
 ## Docker での開発方法
-依存ライブラリはすべてコンテナ内で管理します。ホスト PC で `npm install` を実行する必要はありません。
+依存ライブラリはすべてコンテナ内で管理します。ホスト PC で `npm install` を実行する必要はありません。(コンテナ内で実行する必要があります。)
 
 1. コンテナを起動します。
    ```bash
-   docker-compose up frontend backend
+   docker-compose up --build frontend backend
    ```
    `package.json` を変更した際などは `--build` を付けて再起動してください。
 2. `http://localhost:3000` へアクセスするとアプリが確認できます。
@@ -53,7 +53,7 @@ frontend:
 ### ライブラリ追加手順
 1. コンテナに入ります。
    ```bash
-   docker-compose exec frontend sh
+   docker-compose exec -it react_frontend .bash
    ```
 2. コンテナ内で `npm install <パッケージ名>` を実行します。
 3. 作業後は `exit` し、`docker-compose build frontend` でイメージを更新します。
