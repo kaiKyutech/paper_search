@@ -98,6 +98,12 @@ const PaperSearchApp: React.FC = () => {
 
   return (
     <div className="flex">
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 z-30 transition-opacity duration-300"
+          onClick={toggleDrawer}
+        ></div>
+      )}
       <div
         className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
@@ -127,7 +133,7 @@ const PaperSearchApp: React.FC = () => {
         </nav>
       </div>
 
-      <div className={`flex-grow min-h-screen bg-gray-50 transition-transform duration-300 ${drawerOpen ? 'translate-x-72' : ''}`}> 
+      <div className="flex flex-col flex-grow min-h-screen bg-gray-50">
         {isSearched && (
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
           <div className="flex items-center px-4 py-3">
@@ -169,7 +175,11 @@ const PaperSearchApp: React.FC = () => {
         }
       `}</style>
 
-      <main className={`max-w-4xl mx-auto px-4 ${isSearched ? 'mt-6' : 'pt-8'}`}>
+      <main
+        className={`flex-grow transition-all duration-300 ${drawerOpen ? 'ml-72' : ''}`}
+        style={{ width: drawerOpen ? 'calc(100% - 18rem)' : '100%' }}
+      >
+        <div className={`max-w-4xl mx-auto px-4 ${isSearched ? 'mt-6' : 'pt-8'}`}>
         {sortDropdownOpen && <div className="fixed inset-0 z-30" onClick={() => setSortDropdownOpen(false)}></div>}
         {!isSearched ? (
           <div className="flex flex-col items-center justify-center min-h-screen -mt-20">
@@ -298,6 +308,7 @@ const PaperSearchApp: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   </div>
