@@ -117,7 +117,7 @@ const PaperSearchApp: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="論文を検索..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 />
               </div>
             </div>
@@ -126,7 +126,7 @@ const PaperSearchApp: React.FC = () => {
       )}
 
       <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300" onClick={toggleDrawer}></div>
+        <div className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-300" onClick={toggleDrawer}></div>
         <div className={`fixed left-0 top-0 h-full w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-700">メニュー</h2>
@@ -212,7 +212,7 @@ const PaperSearchApp: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="w-full pl-12 pr-4 py-4 text-base rounded-full focus:outline-none"
+                  className="w-full pl-12 pr-4 py-4 text-base rounded-full focus:outline-none text-black"
                 />
               </div>
             </div>
