@@ -21,6 +21,7 @@ paper_search/
 │       │   ├── globals.css
 │       │   ├── layout.tsx
 │       │   └── page.tsx
+<<<<<<< HEAD
 │       ├── eslint.config.mjs
 │       ├── next.config.ts
 │       ├── postcss.config.mjs
@@ -66,6 +67,43 @@ paper_search/
 └── tools
     ├── project_tree.py
     └── pulling_files.py
+=======
+│       ├── components
+│       │   └── PaperSearchApp.tsx
+│       ├── package.json
+│       ├── package-lock.json
+│       ├── eslint.config.mjs
+│       ├── next.config.ts
+│       ├── postcss.config.mjs
+│       └── tsconfig.json
+└── streamlit_app
+    ├── Dockerfile
+    ├── README.md
+    ├── api
+    │   ├── lm_studio_api.py
+    │   ├── ollama_api.py
+    │   └── paper_api.py
+    ├── app.py
+    ├── core
+    │   ├── data_models.py
+    │   ├── llm_service.py
+    │   └── paper_service.py
+    ├── requirements.txt
+    ├── state
+    │   ├── state_manager.py
+    │   └── state_manager_back.py
+    ├── ui
+    │   ├── chat_panel.py
+    │   ├── paper_network.py
+    │   ├── result_summary.py
+    │   └── search_bar.py
+    └── utils
+        ├── config.py
+        ├── cytoscape_utils.py
+        ├── field_colors.py
+        ├── llm_controller.py
+        └── paper_controller.py
+>>>>>>> codex/検索文字色を黒に変更
 ```
 
 新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。構成の確認には `python tools/project_tree.py` を利用するとディレクトリ構成のみを簡潔に表示できます。詳細な一覧が必要な場合は `python tools/pulling_files.py` を実行してください。いずれのスクリプトも `.gitignore` と `.dockerignore` を参照して不要なファイルを除外します。
