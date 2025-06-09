@@ -13,8 +13,11 @@ paper_search/
 │   ├── backend
 │   │   ├── Dockerfile
 │   │   ├── README.md
+│   │   ├── __init__.py
 │   │   ├── main.py
-│   │   └── requirements.txt
+│   │   ├── models.py
+│   │   ├── requirements.txt
+│   │   └── services.py
 │   └── frontend
 │       ├── Dockerfile
 │       ├── README.md
