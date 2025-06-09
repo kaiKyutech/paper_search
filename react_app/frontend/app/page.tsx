@@ -1,5 +1,5 @@
-import PaperSearchApp from '../components/PaperSearchApp';
+import SearchPage from '../components/SearchPage';
 
 export default function Home() {
-  return <PaperSearchApp />;
+  return <SearchPage />;
 }
