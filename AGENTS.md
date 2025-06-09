@@ -18,9 +18,19 @@ paper_search/
 │   └── frontend
 │       ├── Dockerfile
 │       ├── README.md
+│       ├── app
+│       │   ├── favicon.ico
+│       │   ├── globals.css
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       ├── components
+│       │   └── PaperSearchApp.tsx
 │       ├── package.json
-│       └── src
-│           └── main.tsx
+│       ├── package-lock.json
+│       ├── eslint.config.mjs
+│       ├── next.config.ts
+│       ├── postcss.config.mjs
+│       └── tsconfig.json
 └── streamlit_app
     ├── Dockerfile
     ├── README.md
