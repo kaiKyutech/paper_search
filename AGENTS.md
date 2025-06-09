@@ -7,7 +7,6 @@ paper_search/
 ├── AGENTS.md
 ├── README.md
 ├── docker-compose.yml
-├── project_export.md
 ├── react_app
 │   ├── backend
 │   │   ├── Dockerfile
@@ -17,52 +16,59 @@ paper_search/
 │   └── frontend
 │       ├── Dockerfile
 │       ├── README.md
-│       ├── next.config.ts
-│       ├── package.json
 │       ├── app
 │       │   ├── favicon.ico
 │       │   ├── globals.css
 │       │   ├── layout.tsx
 │       │   └── page.tsx
+│       ├── eslint.config.mjs
+│       ├── next.config.ts
+│       ├── postcss.config.mjs
 │       └── public
 │           ├── file.svg
 │           ├── globe.svg
 │           ├── next.svg
 │           ├── vercel.svg
 │           └── window.svg
-└── streamlit_app
-    ├── Dockerfile
-    ├── README.md
-    ├── api
-    │   ├── lm_studio_api.py
-    │   ├── ollama_api.py
-    │   └── paper_api.py
-    ├── app.py
-    ├── core
-    │   ├── data_models.py
-    │   ├── llm_service.py
-    │   └── paper_service.py
-    ├── requirements.txt
-    ├── state
-    │   ├── state_manager.py
-    │   └── state_manager_back.py
-    ├── ui
-    │   ├── chat_panel.py
-    │   ├── paper_network.py
-    │   ├── result_summary.py
-    │   └── search_bar.py
-    └── utils
-        ├── config.py
-        ├── cytoscape_utils.py
-        ├── field_colors.py
-        ├── llm_controller.py
-        └── paper_controller.py
+├── streamlit_app
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── lm_studio_api.py
+│   │   ├── ollama_api.py
+│   │   └── paper_api.py
+│   ├── app.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── data_models.py
+│   │   ├── llm_service.py
+│   │   └── paper_service.py
+│   ├── requirements.txt
+│   ├── state
+│   │   ├── __init__.py
+│   │   ├── state_manager.py
+│   │   └── state_manager_back.py
+│   ├── ui
+│   │   ├── __init__.py
+│   │   ├── chat_panel.py
+│   │   ├── paper_network.py
+│   │   ├── result_summary.py
+│   │   └── search_bar.py
+│   └── utils
+│       ├── __init__.py
+│       ├── config.py
+│       ├── cytoscape_utils.py
+│       ├── field_colors.py
+│       ├── llm_controller.py
+│       └── paper_controller.py
 └── tools
-    ├── pulling_files.py
-    └── project_tree.py
+    ├── project_tree.py
+    └── pulling_files.py
 ```
 
-新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。`tools/pulling_files.py` を実行すると `project_export.md` に現在の構成が出力されるので参考にするとよいでしょう。
+新しいファイルやディレクトリを追加・削除した場合は、上記のツリーを必ず最新の状態に更新してください。構成の確認には `python tools/project_tree.py` を利用するとディレクトリ構成のみを簡潔に表示できます。詳細な一覧が必要な場合は `python tools/pulling_files.py` を実行してください。いずれのスクリプトも `.gitignore` と `.dockerignore` を参照して不要なファイルを除外します。
 
 ## 開発規約
 - 使用言語は **Python** とする
