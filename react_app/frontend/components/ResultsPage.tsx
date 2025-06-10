@@ -10,42 +10,15 @@ import {
   Bookmark,
   TrendingUp,
   ChevronDown,
-  File,
-  X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const mockResults = [
-  {
-    title: "Attention Is All You Need",
-    authors: "Vaswani, A., Shazeer, N., Parmar, N., et al.",
-    journal: "Advances in Neural Information Processing Systems",
-    year: "2017",
-    abstract:
-      "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism...",
-  },
-  {
-    title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-    authors: "Devlin, J., Chang, M. W., Lee, K., Toutanova, K.",
-    journal: "NAACL-HLT",
-    year: "2019",
-    abstract:
-      "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional...",
-  },
-  {
-    title: "Language Models are Few-Shot Learners",
-    authors: "Brown, T., Mann, B., Ryder, N., et al.",
-    journal: "Advances in Neural Information Processing Systems",
-    year: "2020",
-    abstract:
-      "Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. While typically task-agnostic in architecture...",
-  },
-];
 
 const ResultsPage: React.FC = () => {
   const params = useSearchParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState(params.get("q") || "");
+  const [results, setResults] = useState<any[]>([]);
   const [sortOption, setSortOption] = useState<"relevance" | "date" | "citations">(
     "relevance"
   );
@@ -64,6 +37,17 @@ const ResultsPage: React.FC = () => {
     window.addEventListener("resize", updateHeight);
     return () => window.removeEventListener("resize", updateHeight);
   }, []);
+
+  useEffect(() => {
+    const q = params.get("q");
+    if (!q) return;
+    fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setResults(data.papers || []);
+      })
+      .catch((err) => console.error(err));
+  }, [params]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -208,7 +192,7 @@ const ResultsPage: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-4">
-                {mockResults.map((result, index) => (
+                {results.map((result, index) => (
                   <div
                     key={index}
                     className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
