@@ -13,8 +13,14 @@ paper_search/
 │   ├── backend
 │   │   ├── Dockerfile
 │   │   ├── README.md
+│   │   ├── config.py
 │   │   ├── main.py
-│   │   └── requirements.txt
+│   │   ├── main.py.backup
+│   │   ├── main_summarize_new.py
+│   │   ├── requirements.txt
+│   │   └── services
+│   │       ├── __init__.py
+│   │       └── summary_service.py
 │   └── frontend
 │       ├── Dockerfile
 │       ├── README.md
@@ -29,6 +35,8 @@ paper_search/
 │       │   ├── ResultsPage.tsx
 │       │   └── SearchPage.tsx
 │       ├── eslint.config.mjs
+│       ├── hooks
+│       │   └── useModelConfig.ts
 │       ├── next.config.ts
 │       ├── postcss.config.mjs
 │       ├── public
@@ -37,6 +45,8 @@ paper_search/
 │       │   ├── next.svg
 │       │   ├── vercel.svg
 │       │   └── window.svg
+│       └── utils
+│           └── config.ts
 │       ├── package.json
 │       ├── package-lock.json
 │       └── tsconfig.json

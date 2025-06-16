@@ -2,3 +2,5 @@ fastapi
 uvicorn
 requests
 jsonschema
+httpx
+python-dotenv

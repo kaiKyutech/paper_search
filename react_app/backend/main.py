@@ -8,6 +8,14 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from jsonschema import validate, ValidationError
 import asyncio
+from config import (
+    OLLAMA_MODEL,
+    OLLAMA_CHAT_URL,
+    OLLAMA_API_BASE_URL,
+    running_in_docker,
+    get_ollama_url,
+)
+from services.summary_service import summarize_paper as summarize_service
 
 app = FastAPI()
 
@@ -80,32 +88,13 @@ class ModelConfigRequest(BaseModel):
     model_name: str
 
 # 設定
-import os
-
-def running_in_docker() -> bool:
-    """Docker コンテナ内で実行されているか判定"""
-    return os.path.exists("/.dockerenv")
-
-# StreamlitアプリのOllama設定と同じ形式
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
-
-# 機能別モデル設定（デフォルトは従来のOLLAMA_MODELを使用）
+# 機能別モデル設定（デフォルトは設定済みの OLLAMA_MODEL を使用）
 MODEL_CONFIGS = {
     "analysis": OLLAMA_MODEL,
     "translation": "deepseek-r1:8b-0528-qwen3-q8_0",  # 通常翻訳とストリーミング翻訳で共通
     "quick_summary": "deepseek-r1:8b-0528-qwen3-q8_0",
-    "detailed_summary": "deepseek-r1:8b-0528-qwen3-q8_0"
+    "detailed_summary": "deepseek-r1:8b-0528-qwen3-q8_0",
 }
-default_ollama_url = (
-    "http://host.docker.internal:11435" if running_in_docker() else "http://127.0.0.1:11435"
-)
-OLLAMA_API_BASE_URL = os.environ.get("OLLAMA_API_BASE_URL", default_ollama_url)
-
-def get_ollama_url(path: str) -> str:
-    """Ollama API 用の完全な URL を返す"""
-    return f"{OLLAMA_API_BASE_URL}{path}"
-
-OLLAMA_CHAT_URL = get_ollama_url("/api/chat")
 
 # 分野リスト
 FIELD_LIST = [
@@ -641,118 +630,13 @@ STRUCTURED_SUMMARY_SCHEMA = {
 
 @app.post("/summarize", response_model=SummaryResult)
 async def summarize_paper(request: SummaryRequest):
-    """論文を要約するエンドポイント（構造化要約対応）"""
-    print(f"要約リクエスト受信: {request.title}")
-    
+    """論文を要約するエンドポイント"""
     try:
-        # 簡潔要約
-        simple_summary_prompt = f"""{request.title}
-{request.abstract}
-
-上記論文を2-3文で簡潔に要約してください。
-
-/no_think"""
-        
-        # 構造化要約  
-        structured_summary_prompt = f"""論文: {request.title}
-{request.abstract}
-
-以下のJSON形式で出力:
-
-タイトル: {request.title}
-アブストラクト: {request.abstract}
-
-特に重要なのは **what_they_did** です。これは「この論文は一言で何なのか？」という質問に答えるものです。
-
-以下の項目に従って、論文の内容を整理してJSON形式で日本語で出力してください：
-
-1. **title**: 論文のタイトル（元のタイトルまたは内容を表す短いタイトル）
-2. **keywords**: 論文の主要キーワード（3-8個）。具体的な技術名、手法名、領域名を含む。
-3. **what_they_did**: ⭐最重要⭐ 「コンセプトAを使ってタスクBで新規モデルCを開発」のように、使用技術・対象タスク・成果を含む一文で。抽象的ではなく具体的に。
-4. **background**: 研究背景・動機（なぜこの研究が必要だったのか）
-5. **method**: 使用した手法・アプローチ。具体的な技術名、モデル名、アルゴリズム名を含む。
-6. **results**: 得られた結果・成果。数値や性能指標がある場合は含める。
-7. **conclusion**: 結論・将来の展望
-8. **importance_level**: 常に\"medium\"を設定（重要度判定は主観的なため）
-
-### 出力形式例：
-```json
-{{
-  "title": "Transformerを用いたセンサデータ解析の新規モデル開発",
-  "keywords": ["Transformer", "センサデータ", "時系列解析", "Attention機構", "IoT"],
-  "what_they_did": "Transformerを使ってセンサデータ解析で新規モデルを開発した",
-  "background": "従来のLSTMベースのセンサデータ解析では長期依存関係の捕捉が困難だった",
-  "method": "Transformerアーキテクチャにマルチヘッドアテンションを適用し、時系列センサデータの特徴抽出を改善",
-  "results": "今回の手法はベースラインと比較して精度が15%向上し、特に異常検知タスクで優秀な性能を示した",
-  "conclusion": "提案手法はIoTシステムのリアルタイム監視に応用可能であり、今後は他のセンサタイプへの適用を検討",
-  "importance_level": "medium"
-}}
-```
-
-論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。特に **what_they_did** は具体的で分かりやすい表現でお願いします。
-
-/no_think"""
-        
-        # 並行して両方の要約を実行
-        
-        async def get_simple_summary():
-            payload = {
-                "model": MODEL_CONFIGS["quick_summary"],
-                "messages": [{"role": "user", "content": simple_summary_prompt}],
-                "stream": False,
-                "temperature": 0.5
-            }
-            response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
-            response.raise_for_status()
-            result = response.json()
-            return result["message"]["content"].strip()
-        
-        async def get_structured_summary():
-            payload = {
-                "model": MODEL_CONFIGS["detailed_summary"],
-                "messages": [{"role": "user", "content": structured_summary_prompt}],
-                "stream": False,
-                "temperature": 0.7,
-                "format": STRUCTURED_SUMMARY_SCHEMA
-            }
-            response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=90)
-            response.raise_for_status()
-            result = response.json()
-            content = result["message"]["content"]
-            
-            # マークダウンのコードブロックを除去
-            clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
-            clean_result = "\n".join(clean_lines)
-            
-            try:
-                structured_data = json.loads(clean_result)
-                # スキーマバリデーション
-                validate(instance=structured_data, schema=STRUCTURED_SUMMARY_SCHEMA)
-                return StructuredSummary(**structured_data)
-            except (json.JSONDecodeError, ValidationError) as e:
-                print(f"構造化要約のパースに失敗: {e}")
-                return None
-        
-        print("Ollama API要約呼び出し開始...")
-        
-        # 簡潔な要約を先に取得
-        simple_summary = await get_simple_summary()
-        
-        # 構造化要約を並行して取得（失敗してもエラーにしない）
-        try:
-            structured_summary = await get_structured_summary()
-        except Exception as e:
-            print(f"構造化要約の取得に失敗: {e}")
-            structured_summary = None
-        
-        print("要約完了")
-        return SummaryResult(
-            summary=simple_summary,
-            structured=structured_summary
-        )
-        
+        simple, structured = await summarize_service(request)
+        return SummaryResult(summary=simple, structured=structured)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")
+
 
 @app.post("/quick-summary", response_model=QuickSummary)
 async def quick_summary_paper(request: SummaryRequest):
