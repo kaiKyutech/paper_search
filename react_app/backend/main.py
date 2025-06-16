@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 import requests
 import time
 import json
@@ -29,6 +30,19 @@ class Label(BaseModel):
 class PaperAnalysisRequest(BaseModel):
     title: str
     abstract: str
+
+class TranslationRequest(BaseModel):
+    text: str
+
+class TranslationResult(BaseModel):
+    translation: str
+
+class SummaryRequest(BaseModel):
+    title: str
+    abstract: str
+
+class SummaryResult(BaseModel):
+    summary: str
 
 class PaperAnalysisResult(BaseModel):
     title: Optional[str] = None
@@ -364,4 +378,163 @@ async def analyze_paper(request: PaperAnalysisRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"論文解析中にエラーが発生しました: {str(e)}")
+
+@app.post("/translate", response_model=TranslationResult)
+async def translate_text(request: TranslationRequest):
+    """英語テキストを日本語に翻訳するエンドポイント"""
+    print(f"翻訳リクエスト受信: {request.text[:100]}...")
+    
+    try:
+        # 翻訳用プロンプト（より明確に指示）
+        translation_prompt = f"""以下の英語テキストのみを日本語に翻訳してください。余計な文章や説明は一切追加せず、翻訳結果のみを出力してください。
+
+{request.text}"""
+        
+        # Ollama APIで翻訳実行
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": [{"role": "user", "content": translation_prompt}],
+            "stream": False,
+            "temperature": 0.3  # 翻訳は一貫性を重視
+        }
+        
+        print("Ollama API翻訳呼び出し開始...")
+        response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
+        response.raise_for_status()
+        
+        result = response.json()
+        translation = result["message"]["content"].strip()
+        
+        print("翻訳完了")
+        return TranslationResult(translation=translation)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"翻訳中にエラーが発生しました: {str(e)}")
+
+@app.post("/translate-stream")
+async def translate_text_stream(request: TranslationRequest):
+    """英語テキストを日本語にストリーミング翻訳するエンドポイント"""
+    print(f"ストリーミング翻訳リクエスト受信: {request.text[:100]}...")
+    
+    def generate_translation():
+        try:
+            # 翻訳用プロンプト（明確に指示）
+            translation_prompt = f"""以下の英語テキストのみを日本語に翻訳してください。余計な文章や説明は一切追加せず、翻訳結果のみを出力してください。
+
+{request.text}"""
+            
+            # Ollama APIでストリーミング翻訳実行（Streamlitと同じ形式）
+            payload = {
+                "model": OLLAMA_MODEL,
+                "messages": [{"role": "user", "content": translation_prompt}],
+                "stream": True,
+                "temperature": 0.3
+            }
+            
+            print(f"Ollama URL: {OLLAMA_CHAT_URL}")
+            print("Ollama APIストリーミング翻訳呼び出し開始...")
+            
+            # 開始イベントを送信
+            yield f"data: {json.dumps({'type': 'start', 'content': ''})}\n\n"
+            
+            # Ollamaからのストリーミングレスポンスを処理
+            response = requests.post(OLLAMA_CHAT_URL, json=payload, stream=True, timeout=120)
+            
+            if response.status_code != 200:
+                error_msg = f"Ollama API error: {response.status_code}"
+                print(error_msg)
+                yield f"data: {json.dumps({'type': 'error', 'content': error_msg})}\n\n"
+                return
+            
+            accumulated_text = ""
+            
+            # Streamlitアプリと同じ処理方法
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        chunk_data = json.loads(line.decode('utf-8'))
+                        print(f"受信チャンク: {chunk_data}")
+                        
+                        # Streamlitアプリと同じ構造でcontentを抽出
+                        content = ""
+                        if "message" in chunk_data and "content" in chunk_data["message"]:
+                            content = chunk_data["message"]["content"]
+                        else:
+                            # 例外対応: "text" キーの場合
+                            content = chunk_data.get("text", "")
+                            
+                        if content:
+                            accumulated_text += content
+                            # チャンクデータを送信
+                            yield f"data: {json.dumps({'type': 'chunk', 'content': content, 'accumulated': accumulated_text})}\n\n"
+                            
+                        # 完了フラグをチェック
+                        if chunk_data.get('done', False):
+                            print("ストリーミング完了フラグ受信")
+                            # 完了イベントを送信
+                            yield f"data: {json.dumps({'type': 'complete', 'content': accumulated_text})}\n\n"
+                            break
+                            
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode error: {e}")
+                        # JSONパースに失敗した場合、デコード済みの文字列をそのまま処理
+                        decoded_line = line.decode("utf-8")
+                        print(f"デコード済み行: {decoded_line}")
+                        continue
+                        
+            print("ストリーミング翻訳完了")
+            
+        except Exception as e:
+            print(f"ストリーミング翻訳エラー: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # エラーイベントを送信
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        generate_translation(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
+@app.post("/summarize", response_model=SummaryResult)
+async def summarize_paper(request: SummaryRequest):
+    """論文を要約するエンドポイント"""
+    print(f"要約リクエスト受信: {request.title}")
+    
+    try:
+        # 要約用プロンプト（短く簡潔に）
+        summary_prompt = f"""以下の論文を日本語で簡潔に要約してください。要約は2-3文で、流し読みするユーザーが論文の内容をすぐに理解できるように作成してください。
+
+タイトル: {request.title}
+アブストラクト: {request.abstract}
+
+要約:"""
+        
+        # Ollama APIで要約実行
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": [{"role": "user", "content": summary_prompt}],
+            "stream": False,
+            "temperature": 0.5  # 要約は中程度の創造性
+        }
+        
+        print("Ollama API要約呼び出し開始...")
+        response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
+        response.raise_for_status()
+        
+        result = response.json()
+        summary = result["message"]["content"].strip()
+        
+        print("要約完了")
+        return SummaryResult(summary=summary)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")
 
