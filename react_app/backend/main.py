@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from jsonschema import validate, ValidationError
+import asyncio
 
 app = FastAPI()
 
@@ -41,8 +42,19 @@ class SummaryRequest(BaseModel):
     title: str
     abstract: str
 
+class StructuredSummary(BaseModel):
+    title: Optional[str] = None
+    keywords: List[str]
+    what_they_did: str
+    background: str
+    method: str
+    results: str
+    conclusion: str
+    importance_level: str  # 'high', 'medium', 'low'
+
 class SummaryResult(BaseModel):
     summary: str
+    structured: Optional[StructuredSummary] = None
 
 class PaperAnalysisResult(BaseModel):
     title: Optional[str] = None
@@ -503,37 +515,138 @@ async def translate_text_stream(request: TranslationRequest):
         }
     )
 
+# 構造化要約用のJSONスキーマ
+STRUCTURED_SUMMARY_SCHEMA = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "StructuredSummary",
+    "type": "object",
+    "properties": {
+        "title": { "type": "string" },
+        "keywords": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 3,
+            "maxItems": 8
+        },
+        "what_they_did": { "type": "string" },
+        "background": { "type": "string" },
+        "method": { "type": "string" },
+        "results": { "type": "string" },
+        "conclusion": { "type": "string" },
+        "importance_level": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+        }
+    },
+    "required": ["keywords", "what_they_did", "background", "method", "results", "conclusion", "importance_level"],
+    "additionalProperties": False
+}
+
 @app.post("/summarize", response_model=SummaryResult)
 async def summarize_paper(request: SummaryRequest):
-    """論文を要約するエンドポイント"""
+    """論文を要約するエンドポイント（構造化要約対応）"""
     print(f"要約リクエスト受信: {request.title}")
     
     try:
-        # 要約用プロンプト（短く簡潔に）
-        summary_prompt = f"""以下の論文を日本語で簡潔に要約してください。要約は2-3文で、流し読みするユーザーが論文の内容をすぐに理解できるように作成してください。
+        # 従来の簡潔な要約
+        simple_summary_prompt = f"""以下の論文を日本語で簡潔に要約してください。要約は2-3文で、流し読みするユーザーが論文の内容をすぐに理解できるように作成してください。
 
 タイトル: {request.title}
 アブストラクト: {request.abstract}
 
 要約:"""
         
-        # Ollama APIで要約実行
-        payload = {
-            "model": OLLAMA_MODEL,
-            "messages": [{"role": "user", "content": summary_prompt}],
-            "stream": False,
-            "temperature": 0.5  # 要約は中程度の創造性
-        }
+        # 構造化要約用プロンプト
+        structured_summary_prompt = f"""以下の論文を分析して、構造化された要約を作成してください。
+
+タイトル: {request.title}
+アブストラクト: {request.abstract}
+
+以下の項目に従って、論文の内容を整理してJSON形式で出力してください：
+
+1. **title**: 論文のタイトル（元のタイトルまたは内容を表す短いタイトル）
+2. **keywords**: 論文の主要キーワード（3-8個）
+3. **what_they_did**: 研究者が何をしたのかを一文で簡潔に
+4. **background**: 研究背景・動機（なぜこの研究が必要だったのか）
+5. **method**: 使用した手法・アプローチ
+6. **results**: 得られた結果・成果
+7. **conclusion**: 結論・将来の展望
+8. **importance_level**: 研究の重要度（"high", "medium", "low"のいずれか）
+
+### 出力形式例：
+```json
+{{
+  "title": "深層学習を用いた医療画像診断の精度向上",
+  "keywords": ["深層学習", "医療画像", "診断支援", "CNN", "精度向上"],
+  "what_they_did": "CNNアーキテクチャを改良して医療画像診断の精度を向上させた",
+  "background": "従来の医療画像診断システムは精度が不十分で、誤診のリスクが課題となっていた",
+  "method": "ResNetベースのCNNモデルにアテンション機構を組み込み、大規模医療画像データセットで学習",
+  "results": "診断精度が従来手法と比較して15%向上し、特に早期がん検出で顕著な改善を確認",
+  "conclusion": "提案手法は実用的な診断支援システムとして有効であり、今後は他の疾患への適用を検討",
+  "importance_level": "high"
+}}
+```
+
+論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。"""
+        
+        # 並行して両方の要約を実行
+        import asyncio
+        
+        async def get_simple_summary():
+            payload = {
+                "model": OLLAMA_MODEL,
+                "messages": [{"role": "user", "content": simple_summary_prompt}],
+                "stream": False,
+                "temperature": 0.5
+            }
+            response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
+            response.raise_for_status()
+            result = response.json()
+            return result["message"]["content"].strip()
+        
+        async def get_structured_summary():
+            payload = {
+                "model": OLLAMA_MODEL,
+                "messages": [{"role": "user", "content": structured_summary_prompt}],
+                "stream": False,
+                "temperature": 0.7,
+                "format": STRUCTURED_SUMMARY_SCHEMA
+            }
+            response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=90)
+            response.raise_for_status()
+            result = response.json()
+            content = result["message"]["content"]
+            
+            # マークダウンのコードブロックを除去
+            clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
+            clean_result = "\n".join(clean_lines)
+            
+            try:
+                structured_data = json.loads(clean_result)
+                # スキーマバリデーション
+                validate(instance=structured_data, schema=STRUCTURED_SUMMARY_SCHEMA)
+                return StructuredSummary(**structured_data)
+            except (json.JSONDecodeError, ValidationError) as e:
+                print(f"構造化要約のパースに失敗: {e}")
+                return None
         
         print("Ollama API要約呼び出し開始...")
-        response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
-        response.raise_for_status()
         
-        result = response.json()
-        summary = result["message"]["content"].strip()
+        # 簡潔な要約を先に取得
+        simple_summary = await get_simple_summary()
+        
+        # 構造化要約を並行して取得（失敗してもエラーにしない）
+        try:
+            structured_summary = await get_structured_summary()
+        except Exception as e:
+            print(f"構造化要約の取得に失敗: {e}")
+            structured_summary = None
         
         print("要約完了")
-        return SummaryResult(summary=summary)
+        return SummaryResult(
+            summary=simple_summary,
+            structured=structured_summary
+        )
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")

@@ -16,6 +16,11 @@ import {
   Eye,
   Languages,
   ChevronUp,
+  Target,
+  Zap,
+  BarChart3,
+  CheckCircle,
+  Tag,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -38,6 +43,22 @@ interface PaperAnalysisResult {
   factors: Label[];
   metrics: Label[];
   search_keywords: Label[];
+}
+
+interface StructuredSummary {
+  title?: string;
+  keywords: string[];
+  what_they_did: string;
+  background: string;
+  method: string;
+  results: string;
+  conclusion: string;
+  importance_level: 'high' | 'medium' | 'low';
+}
+
+interface SummaryData {
+  summary?: string;
+  structured?: StructuredSummary;
 }
 
 // 展開可能なテキストコンポーネント
@@ -97,6 +118,122 @@ const ExpandableText: React.FC<ExpandableTextProps> = ({ text, maxLines = 2, cla
   );
 };
 
+// 構造化された要約表示コンポーネント
+interface StructuredSummaryDisplayProps {
+  summary: StructuredSummary;
+  onClose: () => void;
+}
+
+const StructuredSummaryDisplay: React.FC<StructuredSummaryDisplayProps> = ({ summary, onClose }) => {
+  const importanceColor = {
+    high: 'border-red-200 bg-red-50',
+    medium: 'border-yellow-200 bg-yellow-50',
+    low: 'border-green-200 bg-green-50'
+  }[summary.importance_level];
+
+  const importanceLabel = {
+    high: '重要度: 高',
+    medium: '重要度: 中',
+    low: '重要度: 低'
+  }[summary.importance_level];
+
+  return (
+    <div className={`mt-3 relative border rounded-lg p-4 shadow-lg ${importanceColor}`}>
+      <button
+        onClick={onClose}
+        className="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded-full transition-colors z-10"
+      >
+        <X size={14} className="text-gray-600" />
+      </button>
+      
+      {/* ヘッダー部分 */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h5 className="text-sm font-semibold text-gray-800 flex items-center">
+            <FileText className="mr-1" size={16} />
+            論文要約
+          </h5>
+          <span className={`text-xs px-2 py-1 rounded-full ${
+            summary.importance_level === 'high' ? 'bg-red-200 text-red-800' :
+            summary.importance_level === 'medium' ? 'bg-yellow-200 text-yellow-800' :
+            'bg-green-200 text-green-800'
+          }`}>
+            {importanceLabel}
+          </span>
+        </div>
+        
+        {/* キーワード */}
+        {summary.keywords && summary.keywords.length > 0 && (
+          <div className="mb-3">
+            <div className="flex items-center mb-1">
+              <Tag className="mr-1" size={12} />
+              <span className="text-xs font-medium text-gray-600">キーワード</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {summary.keywords.map((keyword, index) => (
+                <span key={index} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* 何をしたのか */}
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center mb-1">
+            <Zap className="mr-1 text-orange-600" size={14} />
+            <span className="text-sm font-semibold text-orange-800">何をしたのか</span>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{summary.what_they_did}</p>
+        </div>
+      </div>
+      
+      {/* 詳細セクション */}
+      <div className="space-y-3">
+        {/* 背景 */}
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center mb-1">
+            <Target className="mr-1 text-blue-600" size={14} />
+            <span className="text-sm font-semibold text-blue-800">背景</span>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{summary.background}</p>
+        </div>
+        
+        {/* 手法 */}
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center mb-1">
+            <Brain className="mr-1 text-purple-600" size={14} />
+            <span className="text-sm font-semibold text-purple-800">手法</span>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{summary.method}</p>
+        </div>
+        
+        {/* 結果 */}
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center mb-1">
+            <BarChart3 className="mr-1 text-green-600" size={14} />
+            <span className="text-sm font-semibold text-green-800">結果</span>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{summary.results}</p>
+        </div>
+        
+        {/* 結論 */}
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center mb-1">
+            <CheckCircle className="mr-1 text-teal-600" size={14} />
+            <span className="text-sm font-semibold text-teal-800">結論</span>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{summary.conclusion}</p>
+        </div>
+      </div>
+      
+      {/* 矢印 */}
+      <div className="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-300"></div>
+    </div>
+  );
+};
+
 const ResultsPage: React.FC = () => {
   const params = useSearchParams();
   const router = useRouter();
@@ -122,7 +259,7 @@ const ResultsPage: React.FC = () => {
   const [translatingPaperId, setTranslatingPaperId] = useState<string | null>(null);
   const [streamingTranslation, setStreamingTranslation] = useState<string>('');
   const [isStreamingTranslation, setIsStreamingTranslation] = useState(false);
-  const [summaryResults, setSummaryResults] = useState<Record<string, string>>({});
+  const [summaryResults, setSummaryResults] = useState<Record<string, SummaryData>>({});
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summarizingPaperId, setSummarizingPaperId] = useState<string | null>(null);
   const [showSummaryPopup, setShowSummaryPopup] = useState<Set<string>>(new Set());
@@ -436,7 +573,7 @@ const ResultsPage: React.FC = () => {
       // 結果をキャッシュ
       setSummaryResults(prev => ({
         ...prev,
-        [paperId]: summaryData.summary
+        [paperId]: summaryData
       }));
       
       if (!isAutomatic) {
@@ -757,29 +894,40 @@ const ResultsPage: React.FC = () => {
                       
                       {/* 要約ポップアップ */}
                       {showSummaryPopup.has(getPaperId(result)) && summaryResults[getPaperId(result)] && (
-                        <div className="mt-3 relative">
-                          <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 shadow-lg relative">
-                            <button
-                              onClick={() => setShowSummaryPopup(prev => {
-                                const newSet = new Set(prev);
-                                newSet.delete(getPaperId(result));
-                                return newSet;
-                              })}
-                              className="absolute top-2 right-2 p-1 hover:bg-teal-100 rounded-full transition-colors"
-                            >
-                              <X size={14} className="text-teal-600" />
-                            </button>
-                            <h5 className="text-sm font-semibold text-teal-800 mb-2 flex items-center">
-                              <FileText className="mr-1" size={16} />
-                              論文要約
-                            </h5>
-                            <p className="text-sm text-teal-900 leading-relaxed">
-                              {summaryResults[getPaperId(result)]}
-                            </p>
+                        summaryResults[getPaperId(result)].structured ? (
+                          <StructuredSummaryDisplay 
+                            summary={summaryResults[getPaperId(result)].structured!} 
+                            onClose={() => setShowSummaryPopup(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(getPaperId(result));
+                              return newSet;
+                            })}
+                          />
+                        ) : (
+                          <div className="mt-3 relative">
+                            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 shadow-lg relative">
+                              <button
+                                onClick={() => setShowSummaryPopup(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.delete(getPaperId(result));
+                                  return newSet;
+                                })}
+                                className="absolute top-2 right-2 p-1 hover:bg-teal-100 rounded-full transition-colors"
+                              >
+                                <X size={14} className="text-teal-600" />
+                              </button>
+                              <h5 className="text-sm font-semibold text-teal-800 mb-2 flex items-center">
+                                <FileText className="mr-1" size={16} />
+                                論文要約
+                              </h5>
+                              <p className="text-sm text-teal-900 leading-relaxed">
+                                {summaryResults[getPaperId(result)].summary}
+                              </p>
+                            </div>
+                            {/* 矢印 */}
+                            <div className="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-teal-200"></div>
                           </div>
-                          {/* 矢印 */}
-                          <div className="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-teal-200"></div>
-                        </div>
+                        )
                       )}
                     </div>
                   )
