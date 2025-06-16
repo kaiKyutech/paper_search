@@ -23,6 +23,8 @@ import {
   Tag,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { API_BASE_URL } from "../utils/config";
+import { useModelConfig } from "../hooks/useModelConfig";
 
 // 型定義
 interface PaperField {
@@ -61,12 +63,6 @@ interface SummaryData {
   structured?: StructuredSummary;
 }
 
-interface ModelConfig {
-  analysis_model: string;
-  translation_model: string;
-  quick_summary_model: string;
-  detailed_summary_model: string;
-}
 
 interface QuickSummary {
   what_they_did: string;
@@ -290,7 +286,7 @@ const ResultsPage: React.FC = () => {
   const [sidebarWidth, setSidebarWidth] = useState(384); // 24rem = 384px
   const [isResizing, setIsResizing] = useState(false);
   const [showSettingsPage, setShowSettingsPage] = useState(false);
-  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  const { config: modelConfig, reload: reloadModelConfig } = useModelConfig();
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
@@ -351,7 +347,7 @@ const ResultsPage: React.FC = () => {
     
     const limit = params.get("limit") || "10";
     setResultLimit(Number(limit));
-    const searchUrl = `http://localhost:8000/search?q=${encodeURIComponent(q)}&limit=${limit}`;
+    const searchUrl = `${API_BASE_URL}/search?q=${encodeURIComponent(q)}&limit=${limit}`;
     
     fetch(searchUrl)
       .then((res) => res.json())
@@ -413,28 +409,16 @@ const ResultsPage: React.FC = () => {
     if (itemId === 'settings') {
       setShowSettingsPage(true);
       setDrawerOpen(false); // Close drawer when navigating to settings
-      loadModelConfig();
+      reloadModelConfig();
       loadAvailableModels();
     }
     // Add other navigation logic here as needed
   };
 
-  const loadModelConfig = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/models/config');
-      if (response.ok) {
-        const config = await response.json();
-        setModelConfig(config);
-      }
-    } catch (error) {
-      console.error('モデル設定の取得に失敗:', error);
-    }
-  };
-
   const loadAvailableModels = async () => {
     setIsLoadingModels(true);
     try {
-      const response = await fetch('http://localhost:8000/models');
+      const response = await fetch(`${API_BASE_URL}/models`);
       if (response.ok) {
         const data = await response.json();
         setAvailableModels(data.models);
@@ -448,7 +432,7 @@ const ResultsPage: React.FC = () => {
 
   const updateModelConfig = async (functionName: string, modelName: string) => {
     try {
-      const response = await fetch('http://localhost:8000/models/config', {
+      const response = await fetch(`${API_BASE_URL}/models/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -460,7 +444,7 @@ const ResultsPage: React.FC = () => {
       });
 
       if (response.ok) {
-        await loadModelConfig(); // Reload config after update
+        await reloadModelConfig(); // Reload config after update
       } else {
         const errorData = await response.json();
         alert(`設定の更新に失敗しました: ${errorData.detail}`);
@@ -483,7 +467,7 @@ const ResultsPage: React.FC = () => {
     setIsSummarizing(true);
     
     try {
-      const response = await fetch('http://localhost:8000/quick-summary', {
+      const response = await fetch(`${API_BASE_URL}/quick-summary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -533,7 +517,7 @@ const ResultsPage: React.FC = () => {
     setIsAnalyzing(true);
     
     try {
-      const response = await fetch('http://localhost:8000/analyze', {
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -607,7 +591,7 @@ const ResultsPage: React.FC = () => {
     
     try {
       // ストリーミング翻訳APIを使用
-      const response = await fetch('http://localhost:8000/translate-stream', {
+      const response = await fetch(`${API_BASE_URL}/translate-stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -722,7 +706,7 @@ const ResultsPage: React.FC = () => {
     setIsSummarizing(true);
     
     try {
-      const response = await fetch('http://localhost:8000/summarize', {
+      const response = await fetch(`${API_BASE_URL}/summarize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
