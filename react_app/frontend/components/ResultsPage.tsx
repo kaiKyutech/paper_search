@@ -61,6 +61,32 @@ interface SummaryData {
   structured?: StructuredSummary;
 }
 
+interface ModelConfig {
+  analysis_model: string;
+  translation_model: string;
+  quick_summary_model: string;
+  detailed_summary_model: string;
+}
+
+interface QuickSummary {
+  what_they_did: string;
+  keywords: string[];
+}
+
+interface StreamingQuickSummary {
+  streamingText: string;
+  isComplete: boolean;
+  keywords: string[];
+  what_they_did: string;
+}
+
+interface AvailableModel {
+  name: string;
+  size: number;
+  modified_at: string;
+  digest: string;
+}
+
 // 展開可能なテキストコンポーネント
 interface ExpandableTextProps {
   text: string;
@@ -125,20 +151,10 @@ interface StructuredSummaryDisplayProps {
 }
 
 const StructuredSummaryDisplay: React.FC<StructuredSummaryDisplayProps> = ({ summary, onClose }) => {
-  const importanceColor = {
-    high: 'border-red-200 bg-red-50',
-    medium: 'border-yellow-200 bg-yellow-50',
-    low: 'border-green-200 bg-green-50'
-  }[summary.importance_level];
-
-  const importanceLabel = {
-    high: '重要度: 高',
-    medium: '重要度: 中',
-    low: '重要度: 低'
-  }[summary.importance_level];
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className={`mt-3 relative border rounded-lg p-4 shadow-lg ${importanceColor}`}>
+    <div className="mt-3 relative border border-teal-200 bg-teal-50 rounded-lg shadow-lg">
       <button
         onClick={onClose}
         className="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded-full transition-colors z-10"
@@ -146,23 +162,24 @@ const StructuredSummaryDisplay: React.FC<StructuredSummaryDisplayProps> = ({ sum
         <X size={14} className="text-gray-600" />
       </button>
       
-      {/* ヘッダー部分 */}
-      <div className="mb-4">
+      {/* ヘッダー部分（常に表示） */}
+      <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h5 className="text-sm font-semibold text-gray-800 flex items-center">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center text-sm font-semibold text-teal-800 hover:text-teal-900 transition-colors cursor-pointer"
+          >
             <FileText className="mr-1" size={16} />
             論文要約
-          </h5>
-          <span className={`text-xs px-2 py-1 rounded-full ${
-            summary.importance_level === 'high' ? 'bg-red-200 text-red-800' :
-            summary.importance_level === 'medium' ? 'bg-yellow-200 text-yellow-800' :
-            'bg-green-200 text-green-800'
-          }`}>
-            {importanceLabel}
-          </span>
+            {isExpanded ? (
+              <ChevronUp className="ml-2" size={14} />
+            ) : (
+              <ChevronDown className="ml-2" size={14} />
+            )}
+          </button>
         </div>
         
-        {/* キーワード */}
+        {/* キーワード（常に表示） */}
         {summary.keywords && summary.keywords.length > 0 && (
           <div className="mb-3">
             <div className="flex items-center mb-1">
@@ -179,57 +196,59 @@ const StructuredSummaryDisplay: React.FC<StructuredSummaryDisplayProps> = ({ sum
           </div>
         )}
         
-        {/* 何をしたのか */}
+        {/* 一言要約（常に表示） */}
         <div className="bg-white rounded-lg p-3 border border-gray-200">
           <div className="flex items-center mb-1">
             <Zap className="mr-1 text-orange-600" size={14} />
-            <span className="text-sm font-semibold text-orange-800">何をしたのか</span>
+            <span className="text-sm font-semibold text-orange-800">一言要約</span>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{summary.what_they_did}</p>
+          <p className="text-sm text-gray-700 leading-relaxed font-medium">{summary.what_they_did}</p>
         </div>
       </div>
       
-      {/* 詳細セクション */}
-      <div className="space-y-3">
-        {/* 背景 */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center mb-1">
-            <Target className="mr-1 text-blue-600" size={14} />
-            <span className="text-sm font-semibold text-blue-800">背景</span>
+      {/* 詳細セクション（展開時のみ表示） */}
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* 背景 */}
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center mb-1">
+              <Target className="mr-1 text-blue-600" size={14} />
+              <span className="text-sm font-semibold text-blue-800">背景</span>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">{summary.background}</p>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{summary.background}</p>
-        </div>
-        
-        {/* 手法 */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center mb-1">
-            <Brain className="mr-1 text-purple-600" size={14} />
-            <span className="text-sm font-semibold text-purple-800">手法</span>
+          
+          {/* 手法 */}
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center mb-1">
+              <Brain className="mr-1 text-purple-600" size={14} />
+              <span className="text-sm font-semibold text-purple-800">手法</span>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">{summary.method}</p>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{summary.method}</p>
-        </div>
-        
-        {/* 結果 */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center mb-1">
-            <BarChart3 className="mr-1 text-green-600" size={14} />
-            <span className="text-sm font-semibold text-green-800">結果</span>
+          
+          {/* 結果 */}
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center mb-1">
+              <BarChart3 className="mr-1 text-green-600" size={14} />
+              <span className="text-sm font-semibold text-green-800">結果</span>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">{summary.results}</p>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{summary.results}</p>
-        </div>
-        
-        {/* 結論 */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center mb-1">
-            <CheckCircle className="mr-1 text-teal-600" size={14} />
-            <span className="text-sm font-semibold text-teal-800">結論</span>
+          
+          {/* 結論 */}
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center mb-1">
+              <CheckCircle className="mr-1 text-teal-600" size={14} />
+              <span className="text-sm font-semibold text-teal-800">結論</span>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">{summary.conclusion}</p>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{summary.conclusion}</p>
         </div>
-      </div>
+      )}
       
       {/* 矢印 */}
-      <div className="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-300"></div>
+      <div className="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-teal-200"></div>
     </div>
   );
 };
@@ -260,12 +279,22 @@ const ResultsPage: React.FC = () => {
   const [streamingTranslation, setStreamingTranslation] = useState<string>('');
   const [isStreamingTranslation, setIsStreamingTranslation] = useState(false);
   const [summaryResults, setSummaryResults] = useState<Record<string, SummaryData>>({});
+  const [quickSummaryResults, setQuickSummaryResults] = useState<Record<string, QuickSummary>>({});
+  const [streamingQuickSummary, setStreamingQuickSummary] = useState<Record<string, StreamingQuickSummary>>({});
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summarizingPaperId, setSummarizingPaperId] = useState<string | null>(null);
   const [showSummaryPopup, setShowSummaryPopup] = useState<Set<string>>(new Set());
+  const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const [autoSummarizeQueue, setAutoSummarizeQueue] = useState<string[]>([]);
   const [currentPriorityTask, setCurrentPriorityTask] = useState<{type: 'summarize' | 'analyze' | 'translate', paperId: string} | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(384); // 24rem = 384px
+  const [isResizing, setIsResizing] = useState(false);
+  const [showSettingsPage, setShowSettingsPage] = useState(false);
+  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
+  const resizeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -277,6 +306,41 @@ const ResultsPage: React.FC = () => {
     window.addEventListener("resize", updateHeight);
     return () => window.removeEventListener("resize", updateHeight);
   }, []);
+
+  // リサイズ機能
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = window.innerWidth - e.clientX;
+      const minWidth = 300; // 最小幅
+      const maxWidth = window.innerWidth * 0.6; // 最大幅（画面の60%）
+      
+      setSidebarWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    if (isResizing) {
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const handleResizeStart = () => {
+    setIsResizing(true);
+  };
 
   useEffect(() => {
     const q = params.get("q");
@@ -343,6 +407,111 @@ const ResultsPage: React.FC = () => {
   const getPaperId = (paper: any): string => {
     // 論文のユニークIDを生成（URL、タイトル、または著者情報から）
     return paper.paperId || paper.url || `${paper.title}_${paper.authors?.[0]?.name || 'unknown'}`;
+  };
+
+  const handleDrawerItemClick = (itemId: string) => {
+    if (itemId === 'settings') {
+      setShowSettingsPage(true);
+      setDrawerOpen(false); // Close drawer when navigating to settings
+      loadModelConfig();
+      loadAvailableModels();
+    }
+    // Add other navigation logic here as needed
+  };
+
+  const loadModelConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/models/config');
+      if (response.ok) {
+        const config = await response.json();
+        setModelConfig(config);
+      }
+    } catch (error) {
+      console.error('モデル設定の取得に失敗:', error);
+    }
+  };
+
+  const loadAvailableModels = async () => {
+    setIsLoadingModels(true);
+    try {
+      const response = await fetch('http://localhost:8000/models');
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableModels(data.models);
+      }
+    } catch (error) {
+      console.error('利用可能モデルの取得に失敗:', error);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  const updateModelConfig = async (functionName: string, modelName: string) => {
+    try {
+      const response = await fetch('http://localhost:8000/models/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          function_name: functionName,
+          model_name: modelName,
+        }),
+      });
+
+      if (response.ok) {
+        await loadModelConfig(); // Reload config after update
+      } else {
+        const errorData = await response.json();
+        alert(`設定の更新に失敗しました: ${errorData.detail}`);
+      }
+    } catch (error) {
+      console.error('モデル設定の更新に失敗:', error);
+      alert('モデル設定の更新に失敗しました');
+    }
+  };
+
+  const handleQuickSummary = async (paper: any) => {
+    const paperId = getPaperId(paper);
+    
+    // 既にキャッシュされた結果があるかチェック
+    if (quickSummaryResults[paperId]) {
+      return;
+    }
+
+    setSummarizingPaperId(paperId);
+    setIsSummarizing(true);
+    
+    try {
+      const response = await fetch('http://localhost:8000/quick-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: paper.title,
+          abstract: paper.abstract || ""
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('簡潔要約に失敗しました');
+      }
+
+      const quickSummary = await response.json();
+      
+      // 結果をキャッシュ
+      setQuickSummaryResults(prev => ({
+        ...prev,
+        [paperId]: quickSummary
+      }));
+      
+    } catch (error) {
+      console.error('簡潔要約エラー:', error);
+    } finally {
+      setIsSummarizing(false);
+      setSummarizingPaperId(null);
+    }
   };
 
   const handleAnalyzePaper = async (paper: any) => {
@@ -512,19 +681,19 @@ const ResultsPage: React.FC = () => {
     }
   };
 
-  // 自動要約キューの処理
+  // 自動簡潔要約キューの処理
   useEffect(() => {
     if (autoSummarizeQueue.length > 0 && !isSummarizing && !currentPriorityTask) {
       const paperId = autoSummarizeQueue[0];
       const paper = results.find(r => getPaperId(r) === paperId);
-      if (paper && !summaryResults[paperId]) {
-        handleSummarizePaper(paper, true);
+      if (paper && !quickSummaryResults[paperId] && !streamingQuickSummary[paperId]) {
+        handleQuickSummary(paper);
         setAutoSummarizeQueue(prev => prev.slice(1));
       } else {
         setAutoSummarizeQueue(prev => prev.slice(1));
       }
     }
-  }, [autoSummarizeQueue, isSummarizing, currentPriorityTask, results, summaryResults]);
+  }, [autoSummarizeQueue, isSummarizing, currentPriorityTask, results, quickSummaryResults, streamingQuickSummary]);
 
   const handleSummarizePaper = async (paper: any, isAutomatic = false) => {
     const paperId = getPaperId(paper);
@@ -582,10 +751,11 @@ const ResultsPage: React.FC = () => {
         // 自動要約の場合は自動で表示
         setShowSummaryPopup(prev => new Set([...prev, paperId]));
       }
+      
     } catch (error) {
-      console.error('要約エラー:', error);
+      console.error('詳細要約エラー:', error);
       if (!isAutomatic) {
-        alert('要約中にエラーが発生しました');
+        alert('詳細要約中にエラーが発生しました');
       }
     } finally {
       setIsSummarizing(false);
@@ -620,6 +790,7 @@ const ResultsPage: React.FC = () => {
             return (
               <button
                 key={item.id}
+                onClick={() => handleDrawerItemClick(item.id)}
                 className="w-full flex items-center px-4 py-3 text-left hover:bg-gray-100 rounded-lg transition-all duration-200 hover:translate-x-1 hover:shadow-sm"
                 style={{
                   animationDelay: drawerOpen ? `${index * 50}ms` : "0ms",
@@ -727,11 +898,12 @@ const ResultsPage: React.FC = () => {
         `}</style>
 
         <div className="flex flex-grow">
-          <main className={`flex-grow transition-all duration-300 ${drawerOpen ? "ml-72" : ""} ${showAnalysisPanel ? "mr-96" : ""}`}
+          <main className={`flex-grow transition-all duration-300 ${drawerOpen ? "ml-72" : ""}`}
             style={{ 
-              width: drawerOpen && showAnalysisPanel ? "calc(100% - 42rem)" : 
+              marginRight: showAnalysisPanel ? `${sidebarWidth}px` : '0px',
+              width: drawerOpen && showAnalysisPanel ? `calc(100% - 18rem - ${sidebarWidth}px)` : 
                      drawerOpen ? "calc(100% - 18rem)" : 
-                     showAnalysisPanel ? "calc(100% - 24rem)" : "100%" 
+                     showAnalysisPanel ? `calc(100% - ${sidebarWidth}px)` : "100%" 
             }}
           >
           <div className="max-w-4xl mx-auto px-4 mt-6">
@@ -836,9 +1008,9 @@ const ResultsPage: React.FC = () => {
                             {isSummarizing && summarizingPaperId === getPaperId(result) ? (
                               <Loader2 className="animate-spin mr-1" size={14} />
                             ) : (
-                              <FileText className="mr-1" size={14} />
+                              <BarChart3 className="mr-1" size={14} />
                             )}
-                            要約
+                            詳細要約
                           </button>
                           <button
                             onClick={() => handleAnalyzePaper(result)}
@@ -892,7 +1064,53 @@ const ResultsPage: React.FC = () => {
                         className="text-sm text-gray-700 leading-relaxed"
                       />
                       
-                      {/* 要約ポップアップ */}
+                      {/* 簡潔要約表示 */}
+                      {(quickSummaryResults[getPaperId(result)] || streamingQuickSummary[getPaperId(result)]) && (
+                        <div className="mt-3 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-3">
+                          {streamingQuickSummary[getPaperId(result)] ? (
+                            /* ストリーミング中の表示 */
+                            <div className="bg-white rounded-lg p-3 border border-gray-200">
+                              <div className="flex items-center mb-2">
+                                <Loader2 className="animate-spin mr-2 text-orange-600" size={14} />
+                                <span className="text-sm font-semibold text-orange-800">要約生成中...</span>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2 min-h-[60px] max-h-[200px] overflow-y-auto">
+                                <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
+                                  {streamingQuickSummary[getPaperId(result)].streamingText}
+                                  <span className="animate-pulse">|</span>
+                                </pre>
+                              </div>
+                            </div>
+                          ) : (
+                            /* 完了時の表示 */
+                            <>
+                              {/* キーワード */}
+                              <div className="mb-2">
+                                <div className="flex flex-wrap gap-1">
+                                  {quickSummaryResults[getPaperId(result)].keywords.map((keyword, index) => (
+                                    <span key={index} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+                                      {keyword}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* 一言要約 */}
+                              <div className="bg-white rounded-lg p-2 border border-gray-200">
+                                <div className="flex items-center mb-1">
+                                  <Zap className="mr-1 text-orange-600" size={12} />
+                                  <span className="text-xs font-semibold text-orange-800">一言要約</span>
+                                </div>
+                                <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                                  {quickSummaryResults[getPaperId(result)].what_they_did}
+                                </p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* 詳細要約ポップアップ */}
                       {showSummaryPopup.has(getPaperId(result)) && summaryResults[getPaperId(result)] && (
                         summaryResults[getPaperId(result)].structured ? (
                           <StructuredSummaryDisplay 
@@ -905,24 +1123,45 @@ const ResultsPage: React.FC = () => {
                           />
                         ) : (
                           <div className="mt-3 relative">
-                            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 shadow-lg relative">
+                            <div className="bg-teal-50 border border-teal-200 rounded-lg shadow-lg relative">
                               <button
                                 onClick={() => setShowSummaryPopup(prev => {
                                   const newSet = new Set(prev);
                                   newSet.delete(getPaperId(result));
                                   return newSet;
                                 })}
-                                className="absolute top-2 right-2 p-1 hover:bg-teal-100 rounded-full transition-colors"
+                                className="absolute top-2 right-2 p-1 hover:bg-teal-100 rounded-full transition-colors z-10"
                               >
                                 <X size={14} className="text-teal-600" />
                               </button>
-                              <h5 className="text-sm font-semibold text-teal-800 mb-2 flex items-center">
-                                <FileText className="mr-1" size={16} />
-                                論文要約
-                              </h5>
-                              <p className="text-sm text-teal-900 leading-relaxed">
-                                {summaryResults[getPaperId(result)].summary}
-                              </p>
+                              <div className="p-4">
+                                <button
+                                  onClick={() => setExpandedSummaries(prev => {
+                                    const newSet = new Set(prev);
+                                    const paperId = getPaperId(result);
+                                    if (newSet.has(paperId)) {
+                                      newSet.delete(paperId);
+                                    } else {
+                                      newSet.add(paperId);
+                                    }
+                                    return newSet;
+                                  })}
+                                  className="flex items-center text-sm font-semibold text-teal-800 hover:text-teal-900 transition-colors cursor-pointer mb-2"
+                                >
+                                  <FileText className="mr-1" size={16} />
+                                  論文要約
+                                  {expandedSummaries.has(getPaperId(result)) ? (
+                                    <ChevronUp className="ml-2" size={14} />
+                                  ) : (
+                                    <ChevronDown className="ml-2" size={14} />
+                                  )}
+                                </button>
+                                {expandedSummaries.has(getPaperId(result)) && (
+                                  <p className="text-sm text-teal-900 leading-relaxed">
+                                    {summaryResults[getPaperId(result)].summary}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                             {/* 矢印 */}
                             <div className="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-teal-200"></div>
@@ -940,10 +1179,35 @@ const ResultsPage: React.FC = () => {
 
           {/* 解析結果右サイドパネル */}
           {showAnalysisPanel && selectedPaper && (
-            <div className="fixed right-0 h-full w-96 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out"
-              style={{ top: headerHeight, height: `calc(100% - ${headerHeight}px)` }}
+            <div className="fixed right-0 h-full bg-white shadow-lg z-40 transform transition-all duration-300 ease-in-out flex"
+              style={{ 
+                top: headerHeight, 
+                height: `calc(100% - ${headerHeight}px)`,
+                width: `${sidebarWidth}px`
+              }}
             >
-              <div className="h-full flex flex-col">
+              {/* リサイズハンドル */}
+              <div 
+                ref={resizeRef}
+                className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors duration-200 flex-shrink-0 group relative"
+                onMouseDown={handleResizeStart}
+                title="サイドバーの幅を調整"
+              >
+                <div className="w-full h-full relative">
+                  <div className="absolute inset-y-0 -left-2 -right-2 group-hover:bg-blue-500 group-hover:opacity-20 transition-all duration-200"></div>
+                  {/* リサイズインジケーター */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex flex-col space-y-0.5">
+                      <div className="w-0.5 h-1 bg-white rounded"></div>
+                      <div className="w-0.5 h-1 bg-white rounded"></div>
+                      <div className="w-0.5 h-1 bg-white rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* サイドパネルコンテンツ */}
+              <div className="flex-1 flex flex-col">
                 <div className="sticky top-0 bg-white border-b border-gray-200">
                   <div className="flex justify-between items-center p-4 pb-0">
                     <h2 className="text-lg font-bold text-gray-800">
@@ -1296,6 +1560,133 @@ const ResultsPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Page Overlay */}
+        {showSettingsPage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-lg">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                    <Settings className="mr-3 text-blue-600" size={28} />
+                    言語モデル設定
+                  </h2>
+                  <button
+                    onClick={() => setShowSettingsPage(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  各機能で使用する言語モデルを個別に設定できます
+                </p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {isLoadingModels ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="animate-spin mr-2" size={24} />
+                    モデル情報を読み込み中...
+                  </div>
+                ) : (
+                  modelConfig && (
+                    <div className="space-y-4">
+                      {/* Analysis Model */}
+                      <div className="bg-purple-50 rounded-lg p-4">
+                        <h4 className="text-lg font-semibold text-purple-800 mb-3 flex items-center">
+                          <Brain className="mr-2" size={20} />
+                          論文解析
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3">論文の分野分類や技術要素の抽出に使用</p>
+                        <select
+                          value={modelConfig.analysis_model}
+                          onChange={(e) => updateModelConfig('analysis', e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                          {availableModels.map((model) => (
+                            <option key={model.name} value={model.name}>
+                              {model.name} ({(model.size / 1024 / 1024 / 1024).toFixed(1)}GB)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Translation Model */}
+                      <div className="bg-orange-50 rounded-lg p-4">
+                        <h4 className="text-lg font-semibold text-orange-800 mb-3 flex items-center">
+                          <Languages className="mr-2" size={20} />
+                          翻訳
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3">英語論文の日本語翻訳（通常・ストリーミング共通）</p>
+                        <select
+                          value={modelConfig.translation_model}
+                          onChange={(e) => updateModelConfig('translation', e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        >
+                          {availableModels.map((model) => (
+                            <option key={model.name} value={model.name}>
+                              {model.name} ({(model.size / 1024 / 1024 / 1024).toFixed(1)}GB)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Quick Summary Model */}
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <h4 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
+                          <Zap className="mr-2" size={20} />
+                          簡潔要約
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3">一言要約・キーワード抽出（自動実行）</p>
+                        <select
+                          value={modelConfig.quick_summary_model}
+                          onChange={(e) => updateModelConfig('quick_summary', e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                          {availableModels.map((model) => (
+                            <option key={model.name} value={model.name}>
+                              {model.name} ({(model.size / 1024 / 1024 / 1024).toFixed(1)}GB)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Detailed Summary Model */}
+                      <div className="bg-teal-50 rounded-lg p-4">
+                        <h4 className="text-lg font-semibold text-teal-800 mb-3 flex items-center">
+                          <BarChart3 className="mr-2" size={20} />
+                          詳細要約
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3">構造化された詳細要約（ボタン押下時）</p>
+                        <select
+                          value={modelConfig.detailed_summary_model}
+                          onChange={(e) => updateModelConfig('detailed_summary', e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          {availableModels.map((model) => (
+                            <option key={model.name} value={model.name}>
+                              {model.name} ({(model.size / 1024 / 1024 / 1024).toFixed(1)}GB)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                )}
+
+                <div className="bg-gray-50 rounded-lg p-4 mt-6">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">注意事項</h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• モデルの変更は即座に反映されます</li>
+                    <li>• 大きなモデルほど高精度ですが、処理時間が長くなります</li>
+                    <li>• 各機能に最適化されたモデルを選択することを推奨します</li>
+                  </ul>
                 </div>
               </div>
             </div>

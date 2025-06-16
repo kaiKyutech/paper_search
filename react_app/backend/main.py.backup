@@ -56,10 +56,6 @@ class SummaryResult(BaseModel):
     summary: str
     structured: Optional[StructuredSummary] = None
 
-class QuickSummary(BaseModel):
-    what_they_did: str
-    keywords: List[str]
-
 class PaperAnalysisResult(BaseModel):
     title: Optional[str] = None
     fields: List[PaperField]
@@ -68,16 +64,6 @@ class PaperAnalysisResult(BaseModel):
     factors: List[Label]
     metrics: List[Label]
     search_keywords: List[Label]
-
-class ModelConfig(BaseModel):
-    analysis_model: str
-    translation_model: str
-    quick_summary_model: str
-    detailed_summary_model: str
-
-class ModelConfigRequest(BaseModel):
-    function_name: str  # 'analysis', 'translation', 'quick_summary', 'detailed_summary'
-    model_name: str
 
 # 設定
 import os
@@ -88,14 +74,6 @@ def running_in_docker() -> bool:
 
 # StreamlitアプリのOllama設定と同じ形式
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
-
-# 機能別モデル設定（デフォルトは従来のOLLAMA_MODELを使用）
-MODEL_CONFIGS = {
-    "analysis": OLLAMA_MODEL,
-    "translation": "deepseek-r1:8b-0528-qwen3-q8_0",  # 通常翻訳とストリーミング翻訳で共通
-    "quick_summary": "deepseek-r1:8b-0528-qwen3-q8_0",
-    "detailed_summary": "deepseek-r1:8b-0528-qwen3-q8_0"
-}
 default_ollama_url = (
     "http://host.docker.internal:11435" if running_in_docker() else "http://127.0.0.1:11435"
 )
@@ -300,7 +278,7 @@ STRUCTURED_JSON_SCHEMA = {
 def get_structured_response_from_ollama(prompt: str, temperature: float = 0.8) -> Dict[str, Any]:
     """Ollama APIを使って構造化されたレスポンスを取得する"""
     payload = {
-        "model": MODEL_CONFIGS["analysis"],
+        "model": OLLAMA_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
         "temperature": temperature,
@@ -342,77 +320,6 @@ async def health_check():
         "ollama_chat_url": OLLAMA_CHAT_URL,
         "running_in_docker": running_in_docker()
     }
-
-@app.get("/models")
-async def get_available_models():
-    """利用可能なOllamaモデル一覧を取得"""
-    try:
-        ollama_tags_url = get_ollama_url("/api/tags")
-        response = requests.get(ollama_tags_url, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        models = []
-        
-        if "models" in data:
-            for model in data["models"]:
-                models.append({
-                    "name": model.get("name", ""),
-                    "size": model.get("size", 0),
-                    "modified_at": model.get("modified_at", ""),
-                    "digest": model.get("digest", "")
-                })
-        
-        return {
-            "models": models,
-            "current_model": OLLAMA_MODEL
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"モデル一覧の取得に失敗しました: {str(e)}")
-
-@app.get("/models/config", response_model=ModelConfig)
-async def get_model_config():
-    """現在の機能別モデル設定を取得"""
-    return ModelConfig(
-        analysis_model=MODEL_CONFIGS["analysis"],
-        translation_model=MODEL_CONFIGS["translation"],
-        quick_summary_model=MODEL_CONFIGS["quick_summary"],
-        detailed_summary_model=MODEL_CONFIGS["detailed_summary"]
-    )
-
-@app.post("/models/config")
-async def update_model_config(request: ModelConfigRequest):
-    """機能別モデル設定を更新"""
-    valid_functions = ["analysis", "translation", "quick_summary", "detailed_summary"]
-    
-    if request.function_name not in valid_functions:
-        raise HTTPException(status_code=400, detail=f"無効な機能名です。有効な値: {valid_functions}")
-    
-    # モデルが利用可能か確認
-    try:
-        ollama_tags_url = get_ollama_url("/api/tags")
-        response = requests.get(ollama_tags_url, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        available_models = [model.get("name", "") for model in data.get("models", [])]
-        
-        if request.model_name not in available_models:
-            raise HTTPException(status_code=400, detail=f"モデル '{request.model_name}' は利用できません。利用可能なモデル: {available_models}")
-        
-        # 設定を更新
-        MODEL_CONFIGS[request.function_name] = request.model_name
-        
-        return {
-            "message": f"{request.function_name}の使用モデルを{request.model_name}に変更しました",
-            "updated_config": MODEL_CONFIGS
-        }
-        
-    except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Ollama API通信エラー: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"モデル設定の更新に失敗しました: {str(e)}")
 
 
 def search_papers_semantic(query: str, year_from: int = 2023, year_to: int | None = None,
@@ -491,15 +398,13 @@ async def translate_text(request: TranslationRequest):
     
     try:
         # 翻訳用プロンプト（より明確に指示）
-        translation_prompt = f"""/no_think 以下の英語テキストのみを日本語に翻訳してください。余計な文章や説明は一切追加せず、翻訳結果のみを出力してください。
+        translation_prompt = f"""以下の英語テキストのみを日本語に翻訳してください。余計な文章や説明は一切追加せず、翻訳結果のみを出力してください。
 
-{request.text}
-
-"""
+{request.text}"""
         
         # Ollama APIで翻訳実行
         payload = {
-            "model": MODEL_CONFIGS["translation"],
+            "model": OLLAMA_MODEL,
             "messages": [{"role": "user", "content": translation_prompt}],
             "stream": False,
             "temperature": 0.3  # 翻訳は一貫性を重視
@@ -526,15 +431,13 @@ async def translate_text_stream(request: TranslationRequest):
     def generate_translation():
         try:
             # 翻訳用プロンプト（明確に指示）
-            translation_prompt = f"""/no_think 以下の英語テキストのみを日本語に翻訳してください。余計な文章や説明は一切追加せず、翻訳結果のみを出力してください。
+            translation_prompt = f"""以下の英語テキストのみを日本語に翻訳してください。余計な文章や説明は一切追加せず、翻訳結果のみを出力してください。
 
-{request.text}
-
-"""
+{request.text}"""
             
             # Ollama APIでストリーミング翻訳実行（Streamlitと同じ形式）
             payload = {
-                "model": MODEL_CONFIGS["translation"],
+                "model": OLLAMA_MODEL,
                 "messages": [{"role": "user", "content": translation_prompt}],
                 "stream": True,
                 "temperature": 0.3
@@ -649,11 +552,9 @@ async def summarize_paper(request: SummaryRequest):
         simple_summary_prompt = f"""{request.title}
 {request.abstract}
 
-上記論文を2-3文で簡潔に要約してください。
-
-/no_think"""
+上記論文を2-3文で簡潔に要約してください。"""
         
-        # 構造化要約  
+        # 構造化要約
         structured_summary_prompt = f"""論文: {request.title}
 {request.abstract}
 
@@ -664,7 +565,7 @@ async def summarize_paper(request: SummaryRequest):
 
 特に重要なのは **what_they_did** です。これは「この論文は一言で何なのか？」という質問に答えるものです。
 
-以下の項目に従って、論文の内容を整理してJSON形式で日本語で出力してください：
+以下の項目に従って、論文の内容を整理してJSON形式で出力してください：
 
 1. **title**: 論文のタイトル（元のタイトルまたは内容を表す短いタイトル）
 2. **keywords**: 論文の主要キーワード（3-8個）。具体的な技術名、手法名、領域名を含む。
@@ -689,15 +590,13 @@ async def summarize_paper(request: SummaryRequest):
 }}
 ```
 
-論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。特に **what_they_did** は具体的で分かりやすい表現でお願いします。
-
-/no_think"""
+論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。特に **what_they_did** は具体的で分かりやすい表現でお願いします。"""
         
         # 並行して両方の要約を実行
         
         async def get_simple_summary():
             payload = {
-                "model": MODEL_CONFIGS["quick_summary"],
+                "model": OLLAMA_MODEL,
                 "messages": [{"role": "user", "content": simple_summary_prompt}],
                 "stream": False,
                 "temperature": 0.5
@@ -709,7 +608,7 @@ async def summarize_paper(request: SummaryRequest):
         
         async def get_structured_summary():
             payload = {
-                "model": MODEL_CONFIGS["detailed_summary"],
+                "model": OLLAMA_MODEL,
                 "messages": [{"role": "user", "content": structured_summary_prompt}],
                 "stream": False,
                 "temperature": 0.7,
@@ -753,293 +652,4 @@ async def summarize_paper(request: SummaryRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")
-
-@app.post("/quick-summary", response_model=QuickSummary)
-async def quick_summary_paper(request: SummaryRequest):
-    """論文の簡潔要約（一言要約+キーワード）を生成"""
-    print(f"簡潔要約リクエスト受信: {request.title}")
-    
-    try:
-        # 簡潔要約用プロンプト
-        quick_summary_prompt = f"""論文: {request.title}
-{request.abstract}
-
-以下のJSON形式で出力してください：
-
-{{
-  "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
-  "what_they_did": "何を使って何をしたか一文で（具体的に）"
-}}
-
-例:
-- keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
-- what_they_did: "BERTを使ってTwitterデータの感情分析モデルを開発した"
-
-keywordsは「キーワード1」ではなく具体的な用語で。what_they_didは抽象的ではなく具体的に。
-
-/no_think"""
-
-        payload = {
-            "model": MODEL_CONFIGS["quick_summary"],
-            "messages": [{"role": "user", "content": quick_summary_prompt}],
-            "stream": False,
-            "temperature": 0.6,
-            "format": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "type": "object",
-                "properties": {
-                    "keywords": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 3,
-                        "maxItems": 6
-                    },
-                    "what_they_did": {"type": "string"}
-                },
-                "required": ["keywords", "what_they_did"],
-                "additionalProperties": False
-            }
-        }
-        
-        print("Ollama API簡潔要約呼び出し開始...")
-        response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
-        response.raise_for_status()
-        
-        result = response.json()
-        content = result["message"]["content"]
-        
-        # マークダウンのコードブロックを除去
-        clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
-        clean_result = "\n".join(clean_lines)
-        
-        try:
-            quick_data = json.loads(clean_result)
-            return QuickSummary(**quick_data)
-        except (json.JSONDecodeError, ValidationError) as e:
-            print(f"簡潔要約のパースに失敗: {e}")
-            # フォールバック: デフォルト値を返す
-            return QuickSummary(
-                keywords=["論文", "研究", "分析"],
-                what_they_did="論文の要約に失敗しました"
-            )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"簡潔要約中にエラーが発生しました: {str(e)}")
-
-@app.post("/quick-summary-stream")
-async def quick_summary_paper_stream(request: SummaryRequest):
-    """論文の簡潔要約をストリーミングで生成"""
-    print(f"ストリーミング簡潔要約リクエスト受信: {request.title}")
-    
-    def generate_quick_summary():
-        try:
-            # 簡潔要約用プロンプト
-            quick_summary_prompt = f"""論文: {request.title}
-{request.abstract}
-
-以下のJSON形式で出力してください：
-
-{{
-  "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
-  "what_they_did": "何を使って何をしたか一文で（具体的に）"
-}}
-
-例:
-- keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
-- what_they_did: "BERTを使ってTwitterデータの感情分析モデルを開発した"
-
-keywordsは「キーワード1」ではなく具体的な用語で。what_they_didは抽象的ではなく具体的に。
-
-/no_think"""
-
-            payload = {
-                "model": MODEL_CONFIGS["quick_summary"],
-                "messages": [{"role": "user", "content": quick_summary_prompt}],
-                "stream": True,
-                "temperature": 0.6
-            }
-            
-            print("Ollama APIストリーミング簡潔要約呼び出し開始...")
-            
-            # 開始イベントを送信
-            yield f"data: {json.dumps({'type': 'start', 'content': ''})}\\n\\n"
-            
-            # Ollamaからのストリーミングレスポンスを処理
-            response = requests.post(OLLAMA_CHAT_URL, json=payload, stream=True, timeout=120)
-            
-            if response.status_code != 200:
-                error_msg = f"Ollama API error: {response.status_code}"
-                print(error_msg)
-                yield f"data: {json.dumps({'type': 'error', 'content': error_msg})}\\n\\n"
-                return
-            
-            accumulated_text = ""
-            
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        chunk_data = json.loads(line.decode('utf-8'))
-                        print(f"受信チャンク: {chunk_data}")
-                        
-                        content = ""
-                        if "message" in chunk_data and "content" in chunk_data["message"]:
-                            content = chunk_data["message"]["content"]
-                        else:
-                            content = chunk_data.get("text", "")
-                            
-                        if content:
-                            accumulated_text += content
-                            # チャンクデータを送信
-                            yield f"data: {json.dumps({'type': 'chunk', 'content': content, 'accumulated': accumulated_text})}\\n\\n"
-                            
-                        # 完了フラグをチェック
-                        if chunk_data.get('done', False):
-                            print("ストリーミング簡潔要約完了フラグ受信")
-                            # 完了イベントを送信
-                            yield f"data: {json.dumps({'type': 'complete', 'content': accumulated_text})}\\n\\n"
-                            break
-                            
-                    except json.JSONDecodeError as e:
-                        print(f"JSON decode error: {e}")
-                        continue
-                        
-            print("ストリーミング簡潔要約完了")
-            
-        except Exception as e:
-            print(f"ストリーミング簡潔要約エラー: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            # エラーイベントを送信
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\\n\\n"
-    
-    return StreamingResponse(
-        generate_quick_summary(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        }
-    )
-
-@app.post("/summarize-stream")
-async def summarize_paper_stream(request: SummaryRequest):
-    """論文の詳細要約をストリーミングで生成"""
-    print(f"ストリーミング詳細要約リクエスト受信: {request.title}")
-    
-    def generate_summary():
-        try:
-            # 構造化要約用プロンプト
-            structured_summary_prompt = f"""論文: {request.title}
-{request.abstract}
-
-以下のJSON形式で出力:
-
-タイトル: {request.title}
-アブストラクト: {request.abstract}
-
-特に重要なのは **what_they_did** です。これは「この論文は一言で何なのか？」という質問に答えるものです。
-
-以下の項目に従って、論文の内容を整理してJSON形式で出力してください：
-
-1. **title**: 論文のタイトル（元のタイトルまたは内容を表す短いタイトル）
-2. **keywords**: 論文の主要キーワード（3-8個）。具体的な技術名、手法名、領域名を含む。
-3. **what_they_did**: ⭐最重要⭐ 「コンセプトAを使ってタスクBで新規モデルCを開発」のように、使用技術・対象タスク・成果を含む一文で。抽象的ではなく具体的に。
-4. **background**: 研究背景・動機（なぜこの研究が必要だったのか）
-5. **method**: 使用した手法・アプローチ。具体的な技術名、モデル名、アルゴリズム名を含む。
-6. **results**: 得られた結果・成果。数値や性能指標がある場合は含める。
-7. **conclusion**: 結論・将来の展望
-8. **importance_level**: 常に\\"medium\\"を設定（重要度判定は主観的なため）
-
-### 出力形式例：
-```json
-{{
-  "title": "Transformerを用いたセンサデータ解析の新規モデル開発",
-  "keywords": ["Transformer", "センサデータ", "時系列解析", "Attention機構", "IoT"],
-  "what_they_did": "Transformerを使ってセンサデータ解析で新規モデルを開発した",
-  "background": "従来のLSTMベースのセンサデータ解析では長期依存関係の捕捉が困難だった",
-  "method": "Transformerアーキテクチャにマルチヘッドアテンションを適用し、時系列センサデータの特徴抽出を改善",
-  "results": "今回の手法はベースラインと比較して精度が15%向上し、特に異常検知タスクで優秀な性能を示した",
-  "conclusion": "提案手法はIoTシステムのリアルタイム監視に応用可能であり、今後は他のセンサタイプへの適用を検討",
-  "importance_level": "medium"
-}}
-```
-
-論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。特に **what_they_did** は具体的で分かりやすい表現でお願いします。
-
-/no_think"""
-
-            payload = {
-                "model": MODEL_CONFIGS["detailed_summary"],
-                "messages": [{"role": "user", "content": structured_summary_prompt}],
-                "stream": True,
-                "temperature": 0.7
-            }
-            
-            print("Ollama APIストリーミング詳細要約呼び出し開始...")
-            
-            # 開始イベントを送信
-            yield f"data: {json.dumps({'type': 'start', 'content': ''})}\\n\\n"
-            
-            # Ollamaからのストリーミングレスポンスを処理
-            response = requests.post(OLLAMA_CHAT_URL, json=payload, stream=True, timeout=120)
-            
-            if response.status_code != 200:
-                error_msg = f"Ollama API error: {response.status_code}"
-                print(error_msg)
-                yield f"data: {json.dumps({'type': 'error', 'content': error_msg})}\\n\\n"
-                return
-            
-            accumulated_text = ""
-            
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        chunk_data = json.loads(line.decode('utf-8'))
-                        print(f"受信チャンク: {chunk_data}")
-                        
-                        content = ""
-                        if "message" in chunk_data and "content" in chunk_data["message"]:
-                            content = chunk_data["message"]["content"]
-                        else:
-                            content = chunk_data.get("text", "")
-                            
-                        if content:
-                            accumulated_text += content
-                            # チャンクデータを送信
-                            yield f"data: {json.dumps({'type': 'chunk', 'content': content, 'accumulated': accumulated_text})}\\n\\n"
-                            
-                        # 完了フラグをチェック
-                        if chunk_data.get('done', False):
-                            print("ストリーミング詳細要約完了フラグ受信")
-                            # 完了イベントを送信
-                            yield f"data: {json.dumps({'type': 'complete', 'content': accumulated_text})}\\n\\n"
-                            break
-                            
-                    except json.JSONDecodeError as e:
-                        print(f"JSON decode error: {e}")
-                        continue
-                        
-            print("ストリーミング詳細要約完了")
-            
-        except Exception as e:
-            print(f"ストリーミング詳細要約エラー: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            # エラーイベントを送信
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\\n\\n"
-    
-    return StreamingResponse(
-        generate_summary(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        }
-    )
 
