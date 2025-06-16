@@ -29,6 +29,8 @@ paper_search/
 │       │   ├── ResultsPage.tsx
 │       │   └── SearchPage.tsx
 │       ├── eslint.config.mjs
+│       ├── lib
+│       │   └── api.ts
 │       ├── next.config.ts
 │       ├── postcss.config.mjs
 │       ├── public

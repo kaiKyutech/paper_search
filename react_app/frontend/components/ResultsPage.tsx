@@ -23,6 +23,16 @@ import {
   Tag,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  searchPapers,
+  getModelConfig,
+  getAvailableModels,
+  updateModelConfig as updateModelConfigApi,
+  quickSummary as quickSummaryApi,
+  analyzePaper as analyzePaperApi,
+  translatePaperStream,
+  summarizePaper as summarizePaperApi,
+} from "../lib/api";
 
 // 型定義
 interface PaperField {
@@ -351,10 +361,8 @@ const ResultsPage: React.FC = () => {
     
     const limit = params.get("limit") || "10";
     setResultLimit(Number(limit));
-    const searchUrl = `http://localhost:8000/search?q=${encodeURIComponent(q)}&limit=${limit}`;
-    
-    fetch(searchUrl)
-      .then((res) => res.json())
+
+    searchPapers(q, Number(limit))
       .then((data) => {
         const endTime = performance.now();
         setSearchTime((endTime - startTime) / 1000);
@@ -421,11 +429,8 @@ const ResultsPage: React.FC = () => {
 
   const loadModelConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8000/models/config');
-      if (response.ok) {
-        const config = await response.json();
-        setModelConfig(config);
-      }
+      const config = await getModelConfig();
+      setModelConfig(config);
     } catch (error) {
       console.error('モデル設定の取得に失敗:', error);
     }
@@ -434,11 +439,8 @@ const ResultsPage: React.FC = () => {
   const loadAvailableModels = async () => {
     setIsLoadingModels(true);
     try {
-      const response = await fetch('http://localhost:8000/models');
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableModels(data.models);
-      }
+      const data = await getAvailableModels();
+      setAvailableModels(data.models);
     } catch (error) {
       console.error('利用可能モデルの取得に失敗:', error);
     } finally {
@@ -448,24 +450,9 @@ const ResultsPage: React.FC = () => {
 
   const updateModelConfig = async (functionName: string, modelName: string) => {
     try {
-      const response = await fetch('http://localhost:8000/models/config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          function_name: functionName,
-          model_name: modelName,
-        }),
-      });
-
-      if (response.ok) {
-        await loadModelConfig(); // Reload config after update
-      } else {
-        const errorData = await response.json();
-        alert(`設定の更新に失敗しました: ${errorData.detail}`);
-      }
-    } catch (error) {
+      await updateModelConfigApi(functionName, modelName);
+      await loadModelConfig();
+    } catch (error: any) {
       console.error('モデル設定の更新に失敗:', error);
       alert('モデル設定の更新に失敗しました');
     }
@@ -483,22 +470,10 @@ const ResultsPage: React.FC = () => {
     setIsSummarizing(true);
     
     try {
-      const response = await fetch('http://localhost:8000/quick-summary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: paper.title,
-          abstract: paper.abstract || ""
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('簡潔要約に失敗しました');
-      }
-
-      const quickSummary = await response.json();
+      const quickSummary = await quickSummaryApi(
+        paper.title,
+        paper.abstract || ""
+      );
       
       // 結果をキャッシュ
       setQuickSummaryResults(prev => ({
@@ -533,22 +508,10 @@ const ResultsPage: React.FC = () => {
     setIsAnalyzing(true);
     
     try {
-      const response = await fetch('http://localhost:8000/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: paper.title,
-          abstract: paper.abstract || ""
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('解析に失敗しました');
-      }
-
-      const analysisData = await response.json();
+      const analysisData = await analyzePaperApi(
+        paper.title,
+        paper.abstract || ""
+      );
       
       // 結果をキャッシュ
       setAnalysisResults(prev => ({
@@ -607,15 +570,7 @@ const ResultsPage: React.FC = () => {
     
     try {
       // ストリーミング翻訳APIを使用
-      const response = await fetch('http://localhost:8000/translate-stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: paper.abstract
-        }),
-      });
+      const response = await translatePaperStream(paper.abstract);
 
       if (!response.ok) {
         throw new Error('翻訳に失敗しました');
@@ -722,22 +677,10 @@ const ResultsPage: React.FC = () => {
     setIsSummarizing(true);
     
     try {
-      const response = await fetch('http://localhost:8000/summarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: paper.title,
-          abstract: paper.abstract
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('要約に失敗しました');
-      }
-
-      const summaryData = await response.json();
+      const summaryData = await summarizePaperApi(
+        paper.title,
+        paper.abstract
+      );
       
       // 結果をキャッシュ
       setSummaryResults(prev => ({
