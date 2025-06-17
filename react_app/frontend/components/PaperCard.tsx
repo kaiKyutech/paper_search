@@ -99,8 +99,8 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         }
       `}</style>
 
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-start flex-1 mr-4">
+      <div className="mb-2">
+        <div className="flex items-start">
           {isSelected && (
             <Eye className="mr-2 mt-1 text-purple-600 flex-shrink-0" size={16} />
           )}
@@ -112,87 +112,6 @@ export const PaperCard: React.FC<PaperCardProps> = ({
           >
             {paper.title}
           </a>
-        </div>
-        <div className="flex space-x-2">
-          {/* PDF表示ボタン */}
-          {paper.openAccessPdf?.url && paper.openAccessPdf.url.trim() && (
-            <button
-              onClick={onOpenPdfViewer}
-              className="flex items-center px-3 py-1.5 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex-shrink-0"
-              title="PDFを表示"
-            >
-              <FileText className="mr-1" size={14} />
-              PDF
-            </button>
-          )}
-          <button
-            onClick={onQuickSummary}
-            disabled={(isQuickSummarizing && quickSummarizingPaperId === paperId) || !paper.abstract}
-            className={`flex items-center px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
-              quickSummary
-                ? 'bg-gray-400 hover:bg-gray-500 text-white'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            {isQuickSummarizing && quickSummarizingPaperId === paperId ? (
-              <LoadingSpinner size={14} />
-            ) : (
-              <Lightbulb className="mr-1" size={14} />
-            )}
-            かんたん要約
-          </button>
-          <button
-            onClick={onSummarize}
-            disabled={(isSummarizing && summarizingPaperId === paperId) || !paper.abstract}
-            className={`flex items-center px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
-              summaryData
-                ? 'bg-gray-400 hover:bg-gray-500 text-white'
-                : 'bg-teal-500 hover:bg-teal-600 text-white'
-            }`}
-          >
-            {isSummarizing && summarizingPaperId === paperId ? (
-              <LoadingSpinner size={14} />
-            ) : (
-              <BarChart3 className="mr-1" size={14} />
-            )}
-            詳細要約
-          </button>
-          <button
-            onClick={onAnalyze}
-            disabled={isAnalyzing && analyzingPaperId === paperId}
-            className={`flex items-center px-3 py-1.5 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
-              hasAnalysis
-                ? 'bg-gray-400 hover:bg-gray-500'
-                : isSelected 
-                  ? 'bg-purple-700 hover:bg-purple-800 ring-2 ring-purple-300' 
-                  : 'bg-purple-600 hover:bg-purple-700'
-            }`}
-          >
-            {isAnalyzing && analyzingPaperId === paperId ? (
-              <LoadingSpinner size={14} />
-            ) : hasAnalysis ? (
-              <Eye className="mr-1" size={14} />
-            ) : (
-              <Brain className="mr-1" size={14} />
-            )}
-            {hasAnalysis ? '表示' : '解析'}
-          </button>
-          <button
-            onClick={onTranslate}
-            disabled={(isTranslating && translatingPaperId === paperId) || !paper.abstract}
-            className={`flex items-center px-3 py-1.5 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
-              hasTranslation
-                ? 'bg-gray-400 hover:bg-gray-500'
-                : 'bg-orange-500 hover:bg-orange-600'
-            }`}
-          >
-            {isTranslating && translatingPaperId === paperId ? (
-              <LoadingSpinner size={14} />
-            ) : (
-              <Languages className="mr-1" size={14} />
-            )}
-            翻訳
-          </button>
         </div>
       </div>
       
@@ -210,6 +129,138 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         maxLines={2}
         className="text-sm text-gray-700 leading-relaxed"
       />
+      
+      {/* メタデータ情報 */}
+      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-600">
+        {paper.year && (
+          <span className="flex items-center">
+            📅 {paper.year}年
+          </span>
+        )}
+        {paper.venue && (
+          <span className="flex items-center">
+            🏛️ {paper.venue}
+          </span>
+        )}
+        {paper.citationCount !== undefined && paper.citationCount > 0 && (
+          <span className="flex items-center">
+            📊 引用:{paper.citationCount}
+          </span>
+        )}
+        {paper.influentialCitationCount !== undefined && paper.influentialCitationCount > 0 && (
+          <span className="flex items-center">
+            ⭐ 影響力{paper.influentialCitationCount}回
+          </span>
+        )}
+        {paper.referenceCount !== undefined && paper.referenceCount > 0 && (
+          <span className="flex items-center">
+            🔗 参考文献{paper.referenceCount}本
+          </span>
+        )}
+        {paper.fieldsOfStudy && paper.fieldsOfStudy.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {paper.fieldsOfStudy.slice(0, 3).map((field, index) => (
+              <span
+                key={index}
+                className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+              >
+                {field}
+              </span>
+            ))}
+            {paper.fieldsOfStudy.length > 3 && (
+              <span className="text-gray-500">+{paper.fieldsOfStudy.length - 3}</span>
+            )}
+          </div>
+        )}
+        {paper.isOpenAccess && (
+          <span className="flex items-center text-green-600">
+            🔓 オープンアクセス
+          </span>
+        )}
+      </div>
+      
+      {/* アクションボタン */}
+      <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-200">
+        <button
+          onClick={onQuickSummary}
+          disabled={(isQuickSummarizing && quickSummarizingPaperId === paperId) || !paper.abstract}
+          className={`flex items-center px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
+            quickSummary
+              ? 'bg-gray-400 hover:bg-gray-500 text-white'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          {isQuickSummarizing && quickSummarizingPaperId === paperId ? (
+            <LoadingSpinner size={14} />
+          ) : (
+            <Lightbulb className="mr-1" size={14} />
+          )}
+          かんたん要約
+        </button>
+        <button
+          onClick={onSummarize}
+          disabled={(isSummarizing && summarizingPaperId === paperId) || !paper.abstract}
+          className={`flex items-center px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
+            summaryData
+              ? 'bg-gray-400 hover:bg-gray-500 text-white'
+              : 'bg-teal-500 hover:bg-teal-600 text-white'
+          }`}
+        >
+          {isSummarizing && summarizingPaperId === paperId ? (
+            <LoadingSpinner size={14} />
+          ) : (
+            <BarChart3 className="mr-1" size={14} />
+          )}
+          詳細要約
+        </button>
+        <button
+          onClick={onAnalyze}
+          disabled={isAnalyzing && analyzingPaperId === paperId}
+          className={`flex items-center px-3 py-1.5 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
+            hasAnalysis
+              ? 'bg-gray-400 hover:bg-gray-500'
+              : isSelected 
+                ? 'bg-purple-700 hover:bg-purple-800 ring-2 ring-purple-300' 
+                : 'bg-purple-600 hover:bg-purple-700'
+          }`}
+        >
+          {isAnalyzing && analyzingPaperId === paperId ? (
+            <LoadingSpinner size={14} />
+          ) : hasAnalysis ? (
+            <Eye className="mr-1" size={14} />
+          ) : (
+            <Brain className="mr-1" size={14} />
+          )}
+          {hasAnalysis ? '表示' : '解析'}
+        </button>
+        <button
+          onClick={onTranslate}
+          disabled={(isTranslating && translatingPaperId === paperId) || !paper.abstract}
+          className={`flex items-center px-3 py-1.5 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
+            hasTranslation
+              ? 'bg-gray-400 hover:bg-gray-500'
+              : 'bg-orange-500 hover:bg-orange-600'
+          }`}
+        >
+          {isTranslating && translatingPaperId === paperId ? (
+            <LoadingSpinner size={14} />
+          ) : (
+            <Languages className="mr-1" size={14} />
+          )}
+          翻訳
+        </button>
+        {/* PDF表示ボタン - 一番右に配置 */}
+        {paper.openAccessPdf?.url && paper.openAccessPdf.url.trim() && (
+          <button
+            onClick={onOpenPdfViewer}
+            className="flex items-center px-3 py-1.5 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex-shrink-0 ml-auto"
+            title="PDFを表示"
+          >
+            <FileText className="mr-1" size={14} />
+            PDF
+          </button>
+        )}
+      </div>
       
       {/* 簡易要約表示 */}
       {quickSummary && (

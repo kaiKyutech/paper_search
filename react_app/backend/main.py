@@ -353,7 +353,7 @@ def search_papers_semantic(query: str, year_from: int = 2023, year_to: int | Non
     url = "http://api.semanticscholar.org/graph/v1/paper/search/"
     params = {
         "query": query,
-        "fields": "title,abstract,url,authors,openAccessPdf,citationCount,publicationDate,paperId",
+        "fields": "title,abstract,url,authors,openAccessPdf,citationCount,publicationDate,paperId,year,influentialCitationCount,fieldsOfStudy,venue,isOpenAccess,referenceCount",
         "limit": limit,
         "sort": "relevance",
     }

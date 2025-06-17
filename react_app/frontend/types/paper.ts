@@ -14,6 +14,12 @@ export interface Paper {
     url: string;
     status: string;
   } | null;
+  year?: number;
+  influentialCitationCount?: number;
+  fieldsOfStudy?: string[];
+  venue?: string;
+  isOpenAccess?: boolean;
+  referenceCount?: number;
 }
 
 export interface PaperField {
