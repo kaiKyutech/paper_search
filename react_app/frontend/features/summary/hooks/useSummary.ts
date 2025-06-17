@@ -15,9 +15,13 @@ export const useSummary = () => {
   const [autoSummarizeQueue, setAutoSummarizeQueue] = useState<string[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
-  const getPaperId = (paper: Paper): string => {
-    return paper.paperId || paper.url || `${paper.title}_${paper.authors?.[0]?.name || 'unknown'}`;
-  };
+  const getPaperId = useCallback((paper: Paper): string => {
+    return (
+      paper.paperId ||
+      paper.url ||
+      `${paper.title}_${paper.authors?.[0]?.name || 'unknown'}`
+    );
+  }, []);
 
   const handleQuickSummary = async (paper: Paper) => {
     const paperId = getPaperId(paper);
@@ -126,12 +130,12 @@ export const useSummary = () => {
     }
   };
 
-  const setAutoSummarizeQueueFromPapers = (papers: Paper[]) => {
+  const setAutoSummarizeQueueFromPapers = useCallback((papers: Paper[]) => {
     const paperIds = papers
       .filter((paper) => paper.abstract)
       .map((paper) => getPaperId(paper));
     setAutoSummarizeQueue(paperIds);
-  };
+  }, [getPaperId]);
 
   // 自動簡潔要約キューの処理（改善版）
   const processAutoSummarizeQueue = useCallback(async (papers: Paper[], currentPriorityTask: any) => {

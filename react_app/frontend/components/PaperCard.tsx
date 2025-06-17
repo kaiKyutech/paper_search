@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Eye, Brain, Languages, BarChart3, Lightbulb } from "lucide-react";
 import { Paper, QuickSummary as QuickSummaryType, StreamingQuickSummary, SummaryData } from "../types";

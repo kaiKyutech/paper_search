@@ -1,6 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
+import Link from "next/link";
 import { Menu, FileText } from "lucide-react";
 import { SearchBar } from "../features/search";
 import { resultLimitOptions } from "../config/api";
@@ -33,13 +34,14 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(({
         >
           <Menu size={24} />
         </button>
-        <div
-          className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+        <Link
+          href="/"
           onClick={onLogoClick}
+          className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
         >
           <FileText className="mr-2 text-blue-600" size={28} />
           <h1 className="text-xl font-normal text-gray-700">Paper Search</h1>
-        </div>
+        </Link>
         
         <SearchBar
           searchQuery={searchQuery}

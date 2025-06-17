@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { X, Brain, Languages } from "lucide-react";
 import { Paper, PaperAnalysisResult } from "../types";
