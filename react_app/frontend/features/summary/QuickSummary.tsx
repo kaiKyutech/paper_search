@@ -55,7 +55,7 @@ export const QuickSummary: React.FC<QuickSummaryProps> = ({
                 <span className="text-xs font-semibold text-orange-800">一言要約</span>
               </div>
               <p className="text-sm text-gray-700 leading-relaxed font-medium">
-                {quickSummary.what_they_did}
+                {quickSummary.summary}
               </p>
             </div>
           </>
