@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { User, Settings, Clock, Bookmark, TrendingUp } from "lucide-react";
 import { DRAWER_WIDTH } from "../config/constants";
