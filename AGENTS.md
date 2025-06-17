@@ -10,6 +10,7 @@ paper_search/
 ├── docs
 │   └── migration_plan.md
 ├── react_app
+│   ├── INST.md
 │   ├── backend
 │   │   ├── Dockerfile
 │   │   ├── README.md
