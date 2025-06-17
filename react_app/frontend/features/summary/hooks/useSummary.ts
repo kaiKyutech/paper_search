@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Paper, QuickSummary, StreamingQuickSummary, SummaryData, PriorityTask } from '../../../types';
 import { apiEndpoints } from '../../../config/api';
 
@@ -8,9 +8,12 @@ export const useSummary = () => {
   const [streamingQuickSummary, setStreamingQuickSummary] = useState<Record<string, StreamingQuickSummary>>({});
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summarizingPaperId, setSummarizingPaperId] = useState<string | null>(null);
+  const [isQuickSummarizing, setIsQuickSummarizing] = useState(false);
+  const [quickSummarizingPaperId, setQuickSummarizingPaperId] = useState<string | null>(null);
   const [showSummaryPopup, setShowSummaryPopup] = useState<Set<string>>(new Set());
   const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const [autoSummarizeQueue, setAutoSummarizeQueue] = useState<string[]>([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
   const getPaperId = (paper: Paper): string => {
     return paper.paperId || paper.url || `${paper.title}_${paper.authors?.[0]?.name || 'unknown'}`;
@@ -24,11 +27,11 @@ export const useSummary = () => {
       return;
     }
 
-    setSummarizingPaperId(paperId);
-    setIsSummarizing(true);
+    setQuickSummarizingPaperId(paperId);
+    setIsQuickSummarizing(true);
     
     try {
-      const response = await fetch(apiEndpoints.quickSummary, {
+      const response = await fetch('/api/quick-summary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +43,7 @@ export const useSummary = () => {
       });
 
       if (!response.ok) {
-        throw new Error('簡潔要約に失敗しました');
+        throw new Error('簡易要約に失敗しました');
       }
 
       const quickSummary = await response.json();
@@ -52,10 +55,11 @@ export const useSummary = () => {
       }));
       
     } catch (error) {
-      console.error('簡潔要約エラー:', error);
+      console.error('簡易要約エラー:', error);
+      alert('簡易要約中にエラーが発生しました');
     } finally {
-      setIsSummarizing(false);
-      setSummarizingPaperId(null);
+      setIsQuickSummarizing(false);
+      setQuickSummarizingPaperId(null);
     }
   };
 
@@ -129,14 +133,40 @@ export const useSummary = () => {
     setAutoSummarizeQueue(paperIds);
   };
 
-  // 自動簡潔要約キューの処理
-  useEffect(() => {
-    if (autoSummarizeQueue.length > 0 && !isSummarizing) {
-      const paperId = autoSummarizeQueue[0];
-      // papers配列は外部から提供される必要がある（useSearchから）
-      setAutoSummarizeQueue(prev => prev.slice(1));
+  // 自動簡潔要約キューの処理（改善版）
+  const processAutoSummarizeQueue = useCallback(async (papers: Paper[], currentPriorityTask: any) => {
+    // 既に処理中、または優先タスクがある場合は処理しない
+    if (isProcessingQueue || isSummarizing || currentPriorityTask) {
+      return;
     }
-  }, [autoSummarizeQueue, isSummarizing]);
+
+    // キューが空の場合は何もしない
+    if (autoSummarizeQueue.length === 0) {
+      return;
+    }
+
+    setIsProcessingQueue(true);
+
+    try {
+      // キューから次の論文を取得
+      const paperId = autoSummarizeQueue[0];
+      const paper = papers.find(p => getPaperId(p) === paperId);
+      
+      if (paper && !quickSummaryResults[paperId] && !streamingQuickSummary[paperId]) {
+        // 簡潔要約を実行
+        await handleQuickSummary(paper);
+      }
+      
+      // 処理済みの論文をキューから削除
+      setAutoSummarizeQueue(prev => prev.slice(1));
+    } catch (error) {
+      console.error('自動要約処理エラー:', error);
+      // エラーが発生した場合もキューから削除して次に進む
+      setAutoSummarizeQueue(prev => prev.slice(1));
+    } finally {
+      setIsProcessingQueue(false);
+    }
+  }, [autoSummarizeQueue, isProcessingQueue, isSummarizing, quickSummaryResults, streamingQuickSummary]);
 
   return {
     summaryResults,
@@ -144,14 +174,18 @@ export const useSummary = () => {
     streamingQuickSummary,
     isSummarizing,
     summarizingPaperId,
+    isQuickSummarizing,
+    quickSummarizingPaperId,
     showSummaryPopup,
     setShowSummaryPopup,
     expandedSummaries,
     setExpandedSummaries,
     autoSummarizeQueue,
+    isProcessingQueue,
     setAutoSummarizeQueueFromPapers,
     handleQuickSummary,
     handleDetailedSummary,
+    processAutoSummarizeQueue,
     getPaperId,
   };
 };

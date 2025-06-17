@@ -57,8 +57,6 @@ const ResultsPage: React.FC = () => {
     isAnalyzing,
     analyzingPaperId,
     handleAnalyzePaper,
-    getAnalysisResult,
-    getPaperId: getAnalysisPaperId,
   } = useAnalysis();
   
   const {
@@ -68,7 +66,6 @@ const ResultsPage: React.FC = () => {
     streamingTranslation,
     isStreamingTranslation,
     handleTranslatePaper,
-    getPaperId: getTranslationPaperId,
   } = useTranslation();
   
   const {
@@ -77,6 +74,8 @@ const ResultsPage: React.FC = () => {
     streamingQuickSummary,
     isSummarizing,
     summarizingPaperId,
+    isQuickSummarizing,
+    quickSummarizingPaperId,
     showSummaryPopup,
     setShowSummaryPopup,
     expandedSummaries,
@@ -84,7 +83,9 @@ const ResultsPage: React.FC = () => {
     handleQuickSummary,
     handleDetailedSummary,
     setAutoSummarizeQueueFromPapers,
-    getPaperId: getSummaryPaperId,
+    processAutoSummarizeQueue,
+    isProcessingQueue,
+    autoSummarizeQueue,
   } = useSummary();
   
   const {
@@ -114,6 +115,29 @@ const ResultsPage: React.FC = () => {
       setAutoSummarizeQueueFromPapers(results);
     }
   }, [results, setAutoSummarizeQueueFromPapers]);
+  
+  // 自動簡潔要約キューの処理（優先タスクが終了したら再開）
+  useEffect(() => {
+    // 優先タスクがない時、またはキューに残りがある時に処理
+    const timer = setTimeout(() => {
+      if (!currentPriorityTask && autoSummarizeQueue.length > 0 && !isProcessingQueue) {
+        processAutoSummarizeQueue(results, currentPriorityTask);
+      }
+    }, 500); // 少し遅延を入れて他のタスクを優先
+
+    return () => clearTimeout(timer);
+  }, [results, currentPriorityTask, processAutoSummarizeQueue, autoSummarizeQueue, isProcessingQueue]);
+
+  // キューの監視（継続的な処理）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!currentPriorityTask && autoSummarizeQueue.length > 0 && !isProcessingQueue && !isSummarizing) {
+        processAutoSummarizeQueue(results, currentPriorityTask);
+      }
+    }, 2000); // 2秒ごとにチェック
+
+    return () => clearInterval(interval);
+  }, [results, currentPriorityTask, processAutoSummarizeQueue, autoSummarizeQueue, isProcessingQueue, isSummarizing]);
   
   // 共通のgetPaperId関数（全フック間で統一）
   const getPaperId = (paper: Paper): string => {
@@ -158,6 +182,7 @@ const ResultsPage: React.FC = () => {
   const handleSummarize = (paper: Paper) => {
     handleDetailedSummary(paper, false);
   };
+  
 
   return (
     <div className="flex">
@@ -212,18 +237,21 @@ const ResultsPage: React.FC = () => {
                       <PaperCard
                         key={index}
                         paper={result}
-                        isSelected={isSelected}
+                        isSelected={!!isSelected}
                         hasAnalysis={!!hasAnalysis}
                         hasTranslation={!!hasTranslation}
                         onAnalyze={() => handleAnalyze(result)}
                         onTranslate={() => handleTranslate(result)}
                         onSummarize={() => handleSummarize(result)}
+                        onQuickSummary={() => handleQuickSummary(result)}
                         isAnalyzing={isAnalyzing}
                         isTranslating={isTranslating}
                         isSummarizing={isSummarizing}
+                        isQuickSummarizing={isQuickSummarizing}
                         analyzingPaperId={analyzingPaperId}
                         translatingPaperId={translatingPaperId}
                         summarizingPaperId={summarizingPaperId}
+                        quickSummarizingPaperId={quickSummarizingPaperId}
                         getPaperId={getPaperId}
                         quickSummary={quickSummaryResults[paperId]}
                         streamingSummary={streamingQuickSummary[paperId]}
@@ -259,7 +287,7 @@ const ResultsPage: React.FC = () => {
             headerHeight={headerHeight}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            analysisResult={selectedPaper ? getAnalysisResult(selectedPaper) : null}
+            analysisResult={selectedPaper ? analysisResults[getPaperId(selectedPaper)] : null}
             translationResult={selectedPaper ? translationResults[getPaperId(selectedPaper)] : null}
             streamingTranslation={streamingTranslation}
             isStreamingTranslation={isStreamingTranslation}

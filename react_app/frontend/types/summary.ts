@@ -15,7 +15,7 @@ export interface SummaryData {
 }
 
 export interface QuickSummary {
-  what_they_did: string;
+  summary: string;
   keywords: string[];
 }
 

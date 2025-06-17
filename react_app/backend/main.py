@@ -57,7 +57,7 @@ class SummaryResult(BaseModel):
     structured: Optional[StructuredSummary] = None
 
 class QuickSummary(BaseModel):
-    what_they_did: str
+    summary: str
     keywords: List[str]
 
 class PaperAnalysisResult(BaseModel):
@@ -92,9 +92,9 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma-textonly_v3:latest")
 # 機能別モデル設定（デフォルトは従来のOLLAMA_MODELを使用）
 MODEL_CONFIGS = {
     "analysis": OLLAMA_MODEL,
-    "translation": "deepseek-r1:8b-0528-qwen3-q8_0",  # 通常翻訳とストリーミング翻訳で共通
-    "quick_summary": "deepseek-r1:8b-0528-qwen3-q8_0",
-    "detailed_summary": "deepseek-r1:8b-0528-qwen3-q8_0"
+    "translation": "gemma-textonly_v3:latest",
+    "quick_summary": "gemma-textonly_v3:latest",
+    "detailed_summary": "gemma-textonly_v3:latest"
 }
 default_ollama_url = (
     "http://host.docker.internal:11435" if running_in_docker() else "http://127.0.0.1:11435"
@@ -754,7 +754,7 @@ async def summarize_paper(request: SummaryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")
 
-@app.post("/quick-summary", response_model=QuickSummary)
+@app.post("/api/quick-summary", response_model=QuickSummary)
 async def quick_summary_paper(request: SummaryRequest):
     """論文の簡潔要約（一言要約+キーワード）を生成"""
     print(f"簡潔要約リクエスト受信: {request.title}")
@@ -768,14 +768,14 @@ async def quick_summary_paper(request: SummaryRequest):
 
 {{
   "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
-  "what_they_did": "何を使って何をしたか一文で（具体的に）"
+  "summary": "論文の簡易要約（100文字程度の日本語要約）"
 }}
 
 例:
 - keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
-- what_they_did: "BERTを使ってTwitterデータの感情分析モデルを開発した"
+- summary: "BERTを使ってTwitterデータの感情分析モデルを開発し、既存手法より高い精度を達成した研究。"
 
-keywordsは「キーワード1」ではなく具体的な用語で。what_they_didは抽象的ではなく具体的に。
+keywordsは「キーワード1」ではなく具体的な用語で。summaryは100文字程度で簡潔に。
 
 /no_think"""
 
@@ -794,9 +794,9 @@ keywordsは「キーワード1」ではなく具体的な用語で。what_they_d
                         "minItems": 3,
                         "maxItems": 6
                     },
-                    "what_they_did": {"type": "string"}
+                    "summary": {"type": "string"}
                 },
-                "required": ["keywords", "what_they_did"],
+                "required": ["keywords", "summary"],
                 "additionalProperties": False
             }
         }
@@ -820,7 +820,7 @@ keywordsは「キーワード1」ではなく具体的な用語で。what_they_d
             # フォールバック: デフォルト値を返す
             return QuickSummary(
                 keywords=["論文", "研究", "分析"],
-                what_they_did="論文の要約に失敗しました"
+                summary="論文の要約に失敗しました"
             )
         
     except Exception as e:
@@ -841,14 +841,14 @@ async def quick_summary_paper_stream(request: SummaryRequest):
 
 {{
   "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
-  "what_they_did": "何を使って何をしたか一文で（具体的に）"
+  "summary": "論文の簡易要約（100文字程度の日本語要約）"
 }}
 
 例:
 - keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
-- what_they_did: "BERTを使ってTwitterデータの感情分析モデルを開発した"
+- summary: "BERTを使ってTwitterデータの感情分析モデルを開発し、既存手法より高い精度を達成した研究。"
 
-keywordsは「キーワード1」ではなく具体的な用語で。what_they_didは抽象的ではなく具体的に。
+keywordsは「キーワード1」ではなく具体的な用語で。summaryは100文字程度で簡潔に。
 
 /no_think"""
 

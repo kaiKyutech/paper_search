@@ -1,6 +1,6 @@
 import React from "react";
 import { X, Brain, Languages } from "lucide-react";
-import { Paper } from "../types";
+import { Paper, PaperAnalysisResult } from "../types";
 import { ResizablePanel } from "../ui";
 import { AnalysisResult } from "../features/analysis";
 import { TranslationResult } from "../features/translation";
@@ -12,7 +12,7 @@ interface AnalysisPanelProps {
   headerHeight: number;
   activeTab: 'analysis' | 'translation';
   onTabChange: (tab: 'analysis' | 'translation') => void;
-  analysisResult: any;
+  analysisResult: PaperAnalysisResult | null;
   translationResult: string | null;
   streamingTranslation: string;
   isStreamingTranslation: boolean;

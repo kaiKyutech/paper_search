@@ -1,8 +1,8 @@
 import React from "react";
-import { Eye, Brain, Languages, BarChart3 } from "lucide-react";
-import { Paper } from "../types";
+import { Eye, Brain, Languages, BarChart3, Lightbulb } from "lucide-react";
+import { Paper, QuickSummary as QuickSummaryType, StreamingQuickSummary, SummaryData } from "../types";
 import { ExpandableText, LoadingSpinner } from "../ui";
-import { QuickSummary, DetailedSummary } from "../features/summary";
+import { DetailedSummary } from "../features/summary";
 
 interface PaperCardProps {
   paper: Paper;
@@ -12,17 +12,20 @@ interface PaperCardProps {
   onAnalyze: () => void;
   onTranslate: () => void;
   onSummarize: () => void;
+  onQuickSummary: () => void;
   isAnalyzing: boolean;
   isTranslating: boolean;
   isSummarizing: boolean;
+  isQuickSummarizing: boolean;
   analyzingPaperId: string | null;
   translatingPaperId: string | null;
   summarizingPaperId: string | null;
+  quickSummarizingPaperId: string | null;
   getPaperId: (paper: Paper) => string;
   // Summary related props
-  quickSummary: any;
-  streamingSummary: any;
-  summaryData: any;
+  quickSummary: QuickSummaryType | null;
+  streamingSummary: StreamingQuickSummary | null;
+  summaryData: SummaryData | null;
   showSummaryPopup: boolean;
   onCloseSummary: () => void;
   expandedSummaries: Set<string>;
@@ -37,12 +40,15 @@ export const PaperCard: React.FC<PaperCardProps> = ({
   onAnalyze,
   onTranslate,
   onSummarize,
+  onQuickSummary,
   isAnalyzing,
   isTranslating,
   isSummarizing,
+  isQuickSummarizing,
   analyzingPaperId,
   translatingPaperId,
   summarizingPaperId,
+  quickSummarizingPaperId,
   getPaperId,
   quickSummary,
   streamingSummary,
@@ -100,6 +106,22 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         </div>
         <div className="flex space-x-2">
           <button
+            onClick={onQuickSummary}
+            disabled={(isQuickSummarizing && quickSummarizingPaperId === paperId) || !paper.abstract}
+            className={`flex items-center px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
+              quickSummary
+                ? 'bg-gray-400 hover:bg-gray-500 text-white'
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }`}
+          >
+            {isQuickSummarizing && quickSummarizingPaperId === paperId ? (
+              <LoadingSpinner size={14} />
+            ) : (
+              <Lightbulb className="mr-1" size={14} />
+            )}
+            簡易要約
+          </button>
+          <button
             onClick={onSummarize}
             disabled={(isSummarizing && summarizingPaperId === paperId) || !paper.abstract}
             className={`flex items-center px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 ${
@@ -156,7 +178,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
       
       <ExpandableText
         text={paper.authors && paper.authors.length > 0 
-          ? paper.authors.map((author: any) => author.name).join(", ")
+          ? paper.authors.map((author) => author.name).join(", ")
           : "著者不明"
         }
         maxLines={2}
@@ -169,12 +191,33 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         className="text-sm text-gray-700 leading-relaxed"
       />
       
-      {/* 簡潔要約表示 */}
-      <QuickSummary
-        paperId={paperId}
-        quickSummary={quickSummary}
-        streamingSummary={streamingSummary}
-      />
+      {/* 簡易要約表示 */}
+      {quickSummary && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-semibold text-blue-800 mb-2">簡易要約</h4>
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="font-medium text-gray-700">要約: </span>
+              <span className="text-gray-600">{quickSummary.summary}</span>
+            </div>
+            {quickSummary.keywords && quickSummary.keywords.length > 0 && (
+              <div>
+                <span className="font-medium text-gray-700">キーワード: </span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {quickSummary.keywords.map((keyword, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* 詳細要約ポップアップ */}
       <DetailedSummary
