@@ -53,7 +53,6 @@ export const PaperCard: React.FC<PaperCardProps> = ({
   quickSummarizingPaperId,
   getPaperId,
   quickSummary,
-  streamingSummary,
   summaryData,
   showSummaryPopup,
   onCloseSummary,
