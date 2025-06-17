@@ -40,7 +40,7 @@ const StructuredSummaryDisplay: React.FC<StructuredSummaryDisplayProps> = ({ sum
             className="flex items-center text-sm font-semibold text-teal-800 hover:text-teal-900 transition-colors cursor-pointer"
           >
             <FileText className="mr-1" size={16} />
-            論文要約
+            詳細要約
             {isExpanded ? (
               <ChevronUp className="ml-2" size={14} />
             ) : (
@@ -66,28 +66,19 @@ const StructuredSummaryDisplay: React.FC<StructuredSummaryDisplayProps> = ({ sum
           </div>
         )}
         
-        {/* 一言要約（常に表示） */}
+        {/* 背景（常に表示） */}
         <div className="bg-white rounded-lg p-3 border border-gray-200">
           <div className="flex items-center mb-1">
-            <Zap className="mr-1 text-orange-600" size={14} />
-            <span className="text-sm font-semibold text-orange-800">一言要約</span>
+            <Target className="mr-1 text-blue-600" size={14} />
+            <span className="text-sm font-semibold text-blue-800">背景</span>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed font-medium">{summary.what_they_did}</p>
+          <p className="text-sm text-gray-700 leading-relaxed font-medium">{summary.background}</p>
         </div>
       </div>
       
       {/* 詳細セクション（展開時のみ表示） */}
       {isExpanded && (
         <div className="px-4 pb-4 space-y-3">
-          {/* 背景 */}
-          <div className="bg-white rounded-lg p-3 border border-gray-200">
-            <div className="flex items-center mb-1">
-              <Target className="mr-1 text-blue-600" size={14} />
-              <span className="text-sm font-semibold text-blue-800">背景</span>
-            </div>
-            <p className="text-sm text-gray-700 leading-relaxed">{summary.background}</p>
-          </div>
-          
           {/* 手法 */}
           <div className="bg-white rounded-lg p-3 border border-gray-200">
             <div className="flex items-center mb-1">

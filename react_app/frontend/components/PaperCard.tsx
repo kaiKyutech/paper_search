@@ -121,7 +121,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
             ) : (
               <Lightbulb className="mr-1" size={14} />
             )}
-            簡易要約
+            かんたん要約
           </button>
           <button
             onClick={onSummarize}
@@ -196,7 +196,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
       {/* 簡易要約表示 */}
       {quickSummary && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">簡易要約</h4>
+          <h4 className="font-semibold text-blue-800 mb-2">かんたん要約</h4>
           <div className="space-y-2 text-sm">
             <div>
               <span className="font-medium text-gray-700">要約: </span>

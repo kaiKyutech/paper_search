@@ -45,7 +45,6 @@ class SummaryRequest(BaseModel):
 class StructuredSummary(BaseModel):
     title: Optional[str] = None
     keywords: List[str]
-    what_they_did: str
     background: str
     method: str
     results: str
@@ -618,7 +617,7 @@ async def quick_summary_paper(request: SummaryRequest):
     print(f"簡潔要約リクエスト受信: {request.title}")
     
     try:
-        # 簡潔要約用プロンプト
+        # 簡潔要約用プロンプト（内容を増強）
         quick_summary_prompt = f"""論文: {request.title}
 {request.abstract}
 
@@ -626,14 +625,18 @@ async def quick_summary_paper(request: SummaryRequest):
 
 {{
   "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
-  "summary": "論文の簡易要約（100文字程度の日本語要約）"
+  "summary": "論文の詳細要約（200文字以内の日本語要約）"
 }}
 
 例:
 - keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
-- summary: "BERTを使ってTwitterデータの感情分析モデルを開発し、既存手法より高い精度を達成した研究。"
+- summary: "BERTを使ってTwitterデータの感情分析モデルを開発した研究。従来のLSTMベースの手法と比較して、BERTのTransformerアーキテクチャを活用することで文脈理解能力が向上し、特にネガティブ感情の検出精度が15%改善した。データセットには10万件のTwitter投稿を使用し、評価指標としてF1スコアを使用。"
 
-keywordsは「キーワード1」ではなく具体的な用語で。summaryは100文字程度で簡潔に。
+要件：
+- keywordsは具体的な技術・手法・領域名を含む
+- summaryは200文字以内で、背景・手法・結果を含む詳細要約
+- 使用した技術、データ、評価方法、得られた成果を具体的に記述
+- 数値や性能指標がある場合は含める
 
 /no_think"""
 
@@ -697,7 +700,6 @@ STRUCTURED_SUMMARY_SCHEMA = {
             "minItems": 3,
             "maxItems": 8
         },
-        "what_they_did": { "type": "string" },
         "background": { "type": "string" },
         "method": { "type": "string" },
         "results": { "type": "string" },
@@ -707,7 +709,7 @@ STRUCTURED_SUMMARY_SCHEMA = {
             "enum": ["high", "medium", "low"]
         }
     },
-    "required": ["keywords", "what_they_did", "background", "method", "results", "conclusion", "importance_level"],
+    "required": ["keywords", "background", "method", "results", "conclusion", "importance_level"],
     "additionalProperties": False
 }
 
@@ -725,43 +727,39 @@ async def summarize_paper(request: SummaryRequest):
 
 /no_think"""
         
-        # 構造化要約  
+        # 構造化要約（簡潔要約を前提とした背景・手法・結果・結論のみ）
         structured_summary_prompt = f"""論文: {request.title}
 {request.abstract}
 
+以下の論文について、簡潔要約は既に別途生成されています。
+構造化要約では、簡潔要約を前提として、以下の4項目のみを詳細に記述してください。
+
+**必ず日本語で生成してください。**
+
 以下のJSON形式で出力:
-
-タイトル: {request.title}
-アブストラクト: {request.abstract}
-
-特に重要なのは **what_they_did** です。これは「この論文は一言で何なのか？」という質問に答えるものです。
-
-以下の項目に従って、論文の内容を整理してJSON形式で日本語で出力してください：
 
 1. **title**: 論文のタイトル（元のタイトルまたは内容を表す短いタイトル）
 2. **keywords**: 論文の主要キーワード（3-8個）。具体的な技術名、手法名、領域名を含む。
-3. **what_they_did**: ⭐最重要⭐ 「コンセプトAを使ってタスクBで新規モデルCを開発」のように、使用技術・対象タスク・成果を含む一文で。抽象的ではなく具体的に。
-4. **background**: 研究背景・動機（なぜこの研究が必要だったのか）
-5. **method**: 使用した手法・アプローチ。具体的な技術名、モデル名、アルゴリズム名を含む。
-6. **results**: 得られた結果・成果。数値や性能指標がある場合は含める。
-7. **conclusion**: 結論・将来の展望
-8. **importance_level**: 常に\"medium\"を設定（重要度判定は主観的なため）
+3. **background**: 研究背景・動機（なぜこの研究が必要だったのか、既存手法の問題点）
+4. **method**: 使用した手法・アプローチ。具体的な技術名、モデル名、アルゴリズム名、実験設定を含む。
+5. **results**: 得られた結果・成果。数値や性能指標、比較結果を具体的に記述。
+6. **conclusion**: 結論・将来の展望、応用可能性
+7. **importance_level**: 常に\"medium\"を設定（重要度判定は主観的なため）
 
 ### 出力形式例：
 ```json
 {{
   "title": "Transformerを用いたセンサデータ解析の新規モデル開発",
   "keywords": ["Transformer", "センサデータ", "時系列解析", "Attention機構", "IoT"],
-  "what_they_did": "Transformerを使ってセンサデータ解析で新規モデルを開発した",
-  "background": "従来のLSTMベースのセンサデータ解析では長期依存関係の捕捉が困難だった",
-  "method": "Transformerアーキテクチャにマルチヘッドアテンションを適用し、時系列センサデータの特徴抽出を改善",
-  "results": "今回の手法はベースラインと比較して精度が15%向上し、特に異常検知タスクで優秀な性能を示した",
-  "conclusion": "提案手法はIoTシステムのリアルタイム監視に応用可能であり、今後は他のセンサタイプへの適用を検討",
+  "background": "従来のLSTMベースのセンサデータ解析では長期依存関係の捕捉が困難で、特に複数センサからの情報統合において性能低下が課題となっていた。",
+  "method": "Transformerアーキテクチャにマルチヘッドアテンションを適用し、時系列センサデータの特徴抽出を改善。位置エンコーディングを時系列データ用に最適化し、3つのベンチマークデータセットで評価。",
+  "results": "提案手法はベースラインLSTMと比較して精度が15%向上（F1スコア0.87→0.92）。特に異常検知タスクでは再現率が20%向上し、誤検出率を半減。",
+  "conclusion": "提案手法はIoTシステムのリアルタイム監視に応用可能。今後は他のセンサタイプへの適用と計算効率の改善を検討予定。",
   "importance_level": "medium"
 }}
 ```
 
-論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。特に **what_they_did** は具体的で分かりやすい表現でお願いします。
+上記の4項目（background, method, results, conclusion）を中心に、論文の技術的詳細を日本語で記述してください。
 
 /no_think"""
         
