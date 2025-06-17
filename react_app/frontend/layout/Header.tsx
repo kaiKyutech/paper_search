@@ -1,3 +1,5 @@
+"use client";
+
 import React, { forwardRef } from "react";
 import { Menu, FileText } from "lucide-react";
 import { SearchBar } from "../features/search";
