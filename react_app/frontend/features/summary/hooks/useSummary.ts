@@ -31,7 +31,7 @@ export const useSummary = () => {
     setIsQuickSummarizing(true);
     
     try {
-      const response = await fetch('/api/quick-summary', {
+      const response = await fetch('/quick-summary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

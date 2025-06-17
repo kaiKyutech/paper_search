@@ -332,36 +332,6 @@ def get_structured_response_from_ollama(prompt: str, temperature: float = 0.8) -
     except ValidationError as e:
         raise HTTPException(status_code=500, detail=f"スキーマバリデーションエラー: {str(e)}")
 
-def search_papers_semantic(query: str, year_from: int = 2023, year_to: int | None = None,
-                           limit: int = 10, max_retries: int = 5) -> list[dict]:
-    """Semantic Scholar API から論文情報を取得する"""
-    url = "http://api.semanticscholar.org/graph/v1/paper/search/"
-    params = {
-        "query": query,
-        "fields": "title,abstract,url,authors",
-        "limit": limit,
-        "sort": "relevance",
-    }
-    if year_to is not None:
-        params["year"] = f"{year_from}-{year_to}"
-    else:
-        params["year"] = f"{year_from}-"
-
-    retries = 0
-    while retries < max_retries:
-        resp = requests.get(url, params=params, timeout=30)
-        data = resp.json()
-        if "data" in data:
-            return data["data"]
-        if data.get("code") == "429":
-            time.sleep(1)
-            retries += 1
-            continue
-        retries += 1
-    raise HTTPException(status_code=500, detail="Semantic Scholar API error")
-
-# エンドポイント定義
-
 @app.get("/health")
 async def health_check():
     """ヘルスチェック用エンドポイント"""
@@ -443,6 +413,36 @@ async def update_model_config(request: ModelConfigRequest):
         raise HTTPException(status_code=500, detail=f"Ollama API通信エラー: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"モデル設定の更新に失敗しました: {str(e)}")
+
+
+def search_papers_semantic(query: str, year_from: int = 2023, year_to: int | None = None,
+                           limit: int = 10, max_retries: int = 5) -> list[dict]:
+    """Semantic Scholar API から論文情報を取得する"""
+    url = "http://api.semanticscholar.org/graph/v1/paper/search/"
+    params = {
+        "query": query,
+        "fields": "title,abstract,url,authors",
+        "limit": limit,
+        "sort": "relevance",
+    }
+    if year_to is not None:
+        params["year"] = f"{year_from}-{year_to}"
+    else:
+        params["year"] = f"{year_from}-"
+
+    retries = 0
+    while retries < max_retries:
+        resp = requests.get(url, params=params, timeout=30)
+        data = resp.json()
+        if "data" in data:
+            return data["data"]
+        if data.get("code") == "429":
+            time.sleep(1)
+            retries += 1
+            continue
+        retries += 1
+    raise HTTPException(status_code=500, detail="Semantic Scholar API error")
+
 
 @app.get("/search")
 async def search_endpoint(q: str, year_from: int = 2023, year_to: int | None = None, limit: int = 10):
@@ -612,78 +612,6 @@ async def translate_text_stream(request: TranslationRequest):
         }
     )
 
-@app.post("/quick-summary", response_model=QuickSummary)
-async def quick_summary_paper(request: SummaryRequest):
-    """論文の簡潔要約（一言要約+キーワード）を生成"""
-    print(f"簡潔要約リクエスト受信: {request.title}")
-    
-    try:
-        # 簡潔要約用プロンプト
-        quick_summary_prompt = f"""論文: {request.title}
-{request.abstract}
-
-以下のJSON形式で出力してください：
-
-{{
-  "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
-  "summary": "論文の簡易要約（100文字程度の日本語要約）"
-}}
-
-例:
-- keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
-- summary: "BERTを使ってTwitterデータの感情分析モデルを開発し、既存手法より高い精度を達成した研究。"
-
-keywordsは「キーワード1」ではなく具体的な用語で。summaryは100文字程度で簡潔に。
-
-/no_think"""
-
-        payload = {
-            "model": MODEL_CONFIGS["quick_summary"],
-            "messages": [{"role": "user", "content": quick_summary_prompt}],
-            "stream": False,
-            "temperature": 0.6,
-            "format": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "type": "object",
-                "properties": {
-                    "keywords": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 3,
-                        "maxItems": 6
-                    },
-                    "summary": {"type": "string"}
-                },
-                "required": ["keywords", "summary"],
-                "additionalProperties": False
-            }
-        }
-        
-        print("Ollama API簡潔要約呼び出し開始...")
-        response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
-        response.raise_for_status()
-        
-        result = response.json()
-        content = result["message"]["content"]
-        
-        # マークダウンのコードブロックを除去
-        clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
-        clean_result = "\n".join(clean_lines)
-        
-        try:
-            quick_data = json.loads(clean_result)
-            return QuickSummary(**quick_data)
-        except (json.JSONDecodeError, ValidationError) as e:
-            print(f"簡潔要約のパースに失敗: {e}")
-            # フォールバック: デフォルト値を返す
-            return QuickSummary(
-                keywords=["論文", "研究", "分析"],
-                summary="論文の要約に失敗しました"
-            )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"簡潔要約中にエラーが発生しました: {str(e)}")
-
 # 構造化要約用のJSONスキーマ
 STRUCTURED_SUMMARY_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -826,6 +754,292 @@ async def summarize_paper(request: SummaryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.post("/quick-summary", response_model=QuickSummary)
+async def quick_summary_paper(request: SummaryRequest):
+    """論文の簡潔要約（一言要約+キーワード）を生成"""
+    print(f"簡潔要約リクエスト受信: {request.title}")
+    
+    try:
+        # 簡潔要約用プロンプト
+        quick_summary_prompt = f"""論文: {request.title}
+{request.abstract}
+
+以下のJSON形式で出力してください：
+
+{{
+  "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
+  "summary": "論文の簡易要約（100文字程度の日本語要約）"
+}}
+
+例:
+- keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
+- summary: "BERTを使ってTwitterデータの感情分析モデルを開発し、既存手法より高い精度を達成した研究。"
+
+keywordsは「キーワード1」ではなく具体的な用語で。summaryは100文字程度で簡潔に。
+
+/no_think"""
+
+        payload = {
+            "model": MODEL_CONFIGS["quick_summary"],
+            "messages": [{"role": "user", "content": quick_summary_prompt}],
+            "stream": False,
+            "temperature": 0.6,
+            "format": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "properties": {
+                    "keywords": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 3,
+                        "maxItems": 6
+                    },
+                    "summary": {"type": "string"}
+                },
+                "required": ["keywords", "summary"],
+                "additionalProperties": False
+            }
+        }
+        
+        print("Ollama API簡潔要約呼び出し開始...")
+        response = requests.post(OLLAMA_CHAT_URL, json=payload, timeout=60)
+        response.raise_for_status()
+        
+        result = response.json()
+        content = result["message"]["content"]
+        
+        # マークダウンのコードブロックを除去
+        clean_lines = [line for line in content.splitlines() if not line.strip().startswith("```")]
+        clean_result = "\n".join(clean_lines)
+        
+        try:
+            quick_data = json.loads(clean_result)
+            return QuickSummary(**quick_data)
+        except (json.JSONDecodeError, ValidationError) as e:
+            print(f"簡潔要約のパースに失敗: {e}")
+            # フォールバック: デフォルト値を返す
+            return QuickSummary(
+                keywords=["論文", "研究", "分析"],
+                summary="論文の要約に失敗しました"
+            )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"簡潔要約中にエラーが発生しました: {str(e)}")
+
+@app.post("/quick-summary-stream")
+async def quick_summary_paper_stream(request: SummaryRequest):
+    """論文の簡潔要約をストリーミングで生成"""
+    print(f"ストリーミング簡潔要約リクエスト受信: {request.title}")
+    
+    def generate_quick_summary():
+        try:
+            # 簡潔要約用プロンプト
+            quick_summary_prompt = f"""論文: {request.title}
+{request.abstract}
+
+以下のJSON形式で出力してください：
+
+{{
+  "keywords": [論文から抽出した具体的な技術・手法・領域名を3-6個],
+  "summary": "論文の簡易要約（100文字程度の日本語要約）"
+}}
+
+例:
+- keywords: ["BERT", "感情分析", "自然言語処理", "Twitter"]
+- summary: "BERTを使ってTwitterデータの感情分析モデルを開発し、既存手法より高い精度を達成した研究。"
+
+keywordsは「キーワード1」ではなく具体的な用語で。summaryは100文字程度で簡潔に。
+
+/no_think"""
+
+            payload = {
+                "model": MODEL_CONFIGS["quick_summary"],
+                "messages": [{"role": "user", "content": quick_summary_prompt}],
+                "stream": True,
+                "temperature": 0.6
+            }
+            
+            print("Ollama APIストリーミング簡潔要約呼び出し開始...")
+            
+            # 開始イベントを送信
+            yield f"data: {json.dumps({'type': 'start', 'content': ''})}\\n\\n"
+            
+            # Ollamaからのストリーミングレスポンスを処理
+            response = requests.post(OLLAMA_CHAT_URL, json=payload, stream=True, timeout=120)
+            
+            if response.status_code != 200:
+                error_msg = f"Ollama API error: {response.status_code}"
+                print(error_msg)
+                yield f"data: {json.dumps({'type': 'error', 'content': error_msg})}\\n\\n"
+                return
+            
+            accumulated_text = ""
+            
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        chunk_data = json.loads(line.decode('utf-8'))
+                        print(f"受信チャンク: {chunk_data}")
+                        
+                        content = ""
+                        if "message" in chunk_data and "content" in chunk_data["message"]:
+                            content = chunk_data["message"]["content"]
+                        else:
+                            content = chunk_data.get("text", "")
+                            
+                        if content:
+                            accumulated_text += content
+                            # チャンクデータを送信
+                            yield f"data: {json.dumps({'type': 'chunk', 'content': content, 'accumulated': accumulated_text})}\\n\\n"
+                            
+                        # 完了フラグをチェック
+                        if chunk_data.get('done', False):
+                            print("ストリーミング簡潔要約完了フラグ受信")
+                            # 完了イベントを送信
+                            yield f"data: {json.dumps({'type': 'complete', 'content': accumulated_text})}\\n\\n"
+                            break
+                            
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode error: {e}")
+                        continue
+                        
+            print("ストリーミング簡潔要約完了")
+            
+        except Exception as e:
+            print(f"ストリーミング簡潔要約エラー: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # エラーイベントを送信
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\\n\\n"
+    
+    return StreamingResponse(
+        generate_quick_summary(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
+@app.post("/summarize-stream")
+async def summarize_paper_stream(request: SummaryRequest):
+    """論文の詳細要約をストリーミングで生成"""
+    print(f"ストリーミング詳細要約リクエスト受信: {request.title}")
+    
+    def generate_summary():
+        try:
+            # 構造化要約用プロンプト
+            structured_summary_prompt = f"""論文: {request.title}
+{request.abstract}
+
+以下のJSON形式で出力:
+
+タイトル: {request.title}
+アブストラクト: {request.abstract}
+
+特に重要なのは **what_they_did** です。これは「この論文は一言で何なのか？」という質問に答えるものです。
+
+以下の項目に従って、論文の内容を整理してJSON形式で出力してください：
+
+1. **title**: 論文のタイトル（元のタイトルまたは内容を表す短いタイトル）
+2. **keywords**: 論文の主要キーワード（3-8個）。具体的な技術名、手法名、領域名を含む。
+3. **what_they_did**: ⭐最重要⭐ 「コンセプトAを使ってタスクBで新規モデルCを開発」のように、使用技術・対象タスク・成果を含む一文で。抽象的ではなく具体的に。
+4. **background**: 研究背景・動機（なぜこの研究が必要だったのか）
+5. **method**: 使用した手法・アプローチ。具体的な技術名、モデル名、アルゴリズム名を含む。
+6. **results**: 得られた結果・成果。数値や性能指標がある場合は含める。
+7. **conclusion**: 結論・将来の展望
+8. **importance_level**: 常に\\"medium\\"を設定（重要度判定は主観的なため）
+
+### 出力形式例：
+```json
+{{
+  "title": "Transformerを用いたセンサデータ解析の新規モデル開発",
+  "keywords": ["Transformer", "センサデータ", "時系列解析", "Attention機構", "IoT"],
+  "what_they_did": "Transformerを使ってセンサデータ解析で新規モデルを開発した",
+  "background": "従来のLSTMベースのセンサデータ解析では長期依存関係の捕捉が困難だった",
+  "method": "Transformerアーキテクチャにマルチヘッドアテンションを適用し、時系列センサデータの特徴抽出を改善",
+  "results": "今回の手法はベースラインと比較して精度が15%向上し、特に異常検知タスクで優秀な性能を示した",
+  "conclusion": "提案手法はIoTシステムのリアルタイム監視に応用可能であり、今後は他のセンサタイプへの適用を検討",
+  "importance_level": "medium"
+}}
+```
+
+論文の内容から適切な情報を抽出し、上記の形式でJSONを出力してください。特に **what_they_did** は具体的で分かりやすい表現でお願いします。
+
+/no_think"""
+
+            payload = {
+                "model": MODEL_CONFIGS["detailed_summary"],
+                "messages": [{"role": "user", "content": structured_summary_prompt}],
+                "stream": True,
+                "temperature": 0.7
+            }
+            
+            print("Ollama APIストリーミング詳細要約呼び出し開始...")
+            
+            # 開始イベントを送信
+            yield f"data: {json.dumps({'type': 'start', 'content': ''})}\\n\\n"
+            
+            # Ollamaからのストリーミングレスポンスを処理
+            response = requests.post(OLLAMA_CHAT_URL, json=payload, stream=True, timeout=120)
+            
+            if response.status_code != 200:
+                error_msg = f"Ollama API error: {response.status_code}"
+                print(error_msg)
+                yield f"data: {json.dumps({'type': 'error', 'content': error_msg})}\\n\\n"
+                return
+            
+            accumulated_text = ""
+            
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        chunk_data = json.loads(line.decode('utf-8'))
+                        print(f"受信チャンク: {chunk_data}")
+                        
+                        content = ""
+                        if "message" in chunk_data and "content" in chunk_data["message"]:
+                            content = chunk_data["message"]["content"]
+                        else:
+                            content = chunk_data.get("text", "")
+                            
+                        if content:
+                            accumulated_text += content
+                            # チャンクデータを送信
+                            yield f"data: {json.dumps({'type': 'chunk', 'content': content, 'accumulated': accumulated_text})}\\n\\n"
+                            
+                        # 完了フラグをチェック
+                        if chunk_data.get('done', False):
+                            print("ストリーミング詳細要約完了フラグ受信")
+                            # 完了イベントを送信
+                            yield f"data: {json.dumps({'type': 'complete', 'content': accumulated_text})}\\n\\n"
+                            break
+                            
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode error: {e}")
+                        continue
+                        
+            print("ストリーミング詳細要約完了")
+            
+        except Exception as e:
+            print(f"ストリーミング詳細要約エラー: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # エラーイベントを送信
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\\n\\n"
+    
+    return StreamingResponse(
+        generate_summary(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+

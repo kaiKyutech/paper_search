@@ -9,15 +9,67 @@ AI/LLMを活用した論文解析、翻訳、要約機能を搭載。
 paper_search/
 ├── streamlit_app/          # Streamlit版アプリ（既存）
 ├── react_app/
-│   ├── frontend/           # Next.js アプリ（メイン開発対象）
-│   │   ├── components/     # ページコンポーネント
-│   │   ├── features/       # 機能別モジュール
-│   │   ├── layout/         # レイアウトコンポーネント
-│   │   ├── ui/             # 共通UIコンポーネント
-│   │   ├── types/          # TypeScript型定義
-│   │   ├── config/         # 設定・定数管理
-│   │   └── settings/       # 設定画面
-│   └── backend/            # FastAPI アプリ
+│   ├── INST.md             # このディレクトリのガイド
+│   ├── backend/            # FastAPI アプリ
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── main.py         # API 実装
+│   │   └── requirements.txt
+│   └── frontend/           # Next.js アプリ（メイン開発対象）
+│       ├── Dockerfile
+│       ├── README.md
+│       ├── app/            # ルーティングエントリ
+│       │   ├── layout.tsx  # 全体レイアウト
+│       │   ├── page.tsx    # トップページ (SearchPage)
+│       │   └── results/
+│       │       └── page.tsx # 検索結果ページ (ResultsPage)
+│       ├── components/     # UI組み合わせ用コンポーネント
+│       │   ├── SearchPage.tsx     # 検索画面
+│       │   ├── ResultsPage.tsx    # 結果画面の骨格
+│       │   ├── PaperCard.tsx      # 各論文カード
+│       │   └── AnalysisPanel.tsx  # 解析・翻訳結果パネル
+│       ├── features/       # 機能別のロジックとUI
+│       │   ├── search/
+│       │   │   ├── hooks/useSearch.ts    # 検索処理
+│       │   │   ├── SearchBar.tsx         # ヘッダー用検索バー
+│       │   │   └── ResultsHeader.tsx     # 件数表示やソート
+│       │   ├── analysis/
+│       │   │   ├── hooks/useAnalysis.ts  # 解析API呼び出し
+│       │   │   └── AnalysisResult.tsx    # 解析結果表示
+│       │   ├── translation/
+│       │   │   ├── hooks/useTranslation.ts  # 翻訳API呼び出し(ストリーミング)
+│       │   │   └── TranslationResult.tsx    # 翻訳結果表示
+│       │   └── summary/
+│       │       ├── hooks/useSummary.ts      # 要約API呼び出し
+│       │       ├── QuickSummary.tsx         # 簡潔要約
+│       │       └── DetailedSummary.tsx      # 詳細要約
+│       ├── layout/
+│       │   ├── Header.tsx  # 共通ヘッダー
+│       │   ├── Sidebar.tsx # サイドメニュー
+│       │   └── index.ts
+│       ├── settings/
+│       │   ├── hooks/useModelSettings.ts # モデル設定取得/更新
+│       │   ├── ModelSettings.tsx         # 設定モーダル
+│       │   └── index.ts
+│       ├── ui/             # 汎用UI部品
+│       │   ├── ExpandableText.tsx
+│       │   ├── LoadingSpinner.tsx
+│       │   ├── ResizablePanel.tsx
+│       │   └── index.ts
+│       ├── config/         # API URLや定数
+│       │   ├── api.ts
+│       │   └── constants.ts
+│       ├── types/          # TypeScript型定義
+│       │   ├── analysis.ts
+│       │   ├── api.ts
+│       │   ├── index.ts
+│       │   ├── paper.ts
+│       │   └── summary.ts
+│       ├── next.config.ts
+│       ├── postcss.config.mjs
+│       ├── package.json
+│       ├── package-lock.json
+│       └── tsconfig.json
 └── docker-compose.yml      # Docker環境設定
 ```
 
@@ -70,46 +122,7 @@ docker-compose up streamlit
 ## アーキテクチャ設計（2025-06-17実装完了）
 
 ### フィーチャーベースアーキテクチャ
-```
-frontend/
-├── components/
-│   ├── ResultsPage.tsx        # メインページ（280行、83%削減）
-│   ├── PaperCard.tsx          # 論文カードコンポーネント
-│   └── AnalysisPanel.tsx      # 解析結果パネル
-├── features/                  # 機能別モジュール
-│   ├── search/                # 検索機能
-│   │   ├── hooks/useSearch.ts
-│   │   ├── SearchBar.tsx
-│   │   └── ResultsHeader.tsx
-│   ├── analysis/              # 論文解析機能
-│   │   ├── hooks/useAnalysis.ts
-│   │   └── AnalysisResult.tsx
-│   ├── translation/           # 翻訳機能（ストリーミング対応）
-│   │   ├── hooks/useTranslation.ts
-│   │   └── TranslationResult.tsx
-│   └── summary/               # 要約機能
-│       ├── hooks/useSummary.ts
-│       ├── QuickSummary.tsx   # 簡潔要約（自動実行）
-│       └── DetailedSummary.tsx # 詳細要約（構造化）
-├── layout/                    # レイアウトコンポーネント
-│   ├── Header.tsx
-│   └── Sidebar.tsx
-├── ui/                        # 再利用可能UIコンポーネント
-│   ├── ExpandableText.tsx
-│   ├── LoadingSpinner.tsx
-│   └── ResizablePanel.tsx
-├── types/                     # TypeScript型定義
-│   ├── paper.ts
-│   ├── analysis.ts
-│   ├── summary.ts
-│   └── api.ts
-├── config/                    # 設定・定数管理
-│   ├── api.ts                 # API URL一元管理
-│   └── constants.ts
-└── settings/                  # 設定画面
-    ├── hooks/useModelSettings.ts
-    └── ModelSettings.tsx
-```
+詳細なディレクトリ構成は上記「プロジェクト構成」を参照。
 
 ### 設計原則
 1. **単一責任原則**: 各コンポーネント/フックは1つの責任のみ
@@ -168,6 +181,36 @@ frontend/
 - **コード重複**: 大幅削減
 - **チーム開発**: 機能別ファイル分割でコンフリクト軽減
 
+## ファイル間の連携
+
+- **フロントエンド ↔ バックエンド**
+  - `frontend/config/api.ts` に API ベースURLと各エンドポイントを定義。これをカスタムフック (例:`useSearch`) から参照し、`backend/main.py` の API を呼び出します。
+- **ページ構成**
+  - `app/page.tsx` → `components/SearchPage` を表示。検索クエリ入力後、Next.js の `router.push` で `/results` へ遷移します。
+  - `app/results/page.tsx` → `components/ResultsPage` を表示。検索結果取得や解析・翻訳・要約の操作を行います。
+- **ResultsPage の内部**
+  - `features/search/useSearch` が検索 API `/search` を実行し結果リストを取得。
+  - 各論文は `components/PaperCard` で表示し、解析や翻訳ボタン押下時に `useAnalysis` `useTranslation` などのフックを呼び出します。
+  - 解析結果や翻訳結果は `components/AnalysisPanel` 内で `AnalysisResult` や `TranslationResult` コンポーネントにより表示されます。
+  - 要約機能は `useSummary` フックを通じて `/quick-summary` `/summarize` へアクセスし、`QuickSummary` / `DetailedSummary` コンポーネントでUI表示します。
+  - モデル設定は `settings/ModelSettings` がモーダルとして動作し、`Sidebar` から開きます。
+- **共通UI**
+  - `ui` ディレクトリのコンポーネントは複数画面で利用される小規模部品です。たとえば `LoadingSpinner` や `ResizablePanel` などです。
+
+## 画面構成と責務
+
+1. **検索画面 (`/`)**
+   - `SearchPage` が中心。検索クエリ入力や高度なオプションを扱います。
+   - 入力値は `useRouter` を利用して `/results` にクエリパラメータとして渡されます。
+
+2. **結果画面 (`/results`)**
+   - `ResultsPage` がメイン。ヘッダー (`Header`)、サイドバー (`Sidebar`)、論文一覧 (`PaperCard`) を組み合わせて構成。
+   - 解析・翻訳・要約はサイドパネル (`AnalysisPanel`) で閲覧。
+   - モデル設定 (`ModelSettings`) をモーダルで開くことができます。
+
+3. **バックエンド (`backend/main.py`)**
+   - 論文検索、解析、翻訳、要約などのAPIを提供します。フロントエンドの各フックはこれらのエンドポイントを呼び出し、結果を表示します。
+
 ## 開発ガイドライン
 
 ### 作業時の注意点
@@ -177,11 +220,13 @@ frontend/
 - **段階的修正**: lintエラーは即座修正
 
 ### 新機能追加時の手順
-1. 適切な `features/` ディレクトリに配置
-2. カスタムフックでビジネスロジック分離
-3. 型定義を `types/` に追加
-4. UIコンポーネントは `ui/` で再利用性確保
-5. 設定は `config/` で一元管理
+1. **機能別ディレクトリ**に新しい機能を追加してください。フックでロジックを分離し、UIコンポーネントは `components` または `ui` に配置します。
+2. 型定義は `types/` に追加し、`config/api.ts` にエンドポイントを追記します。
+3. 新規ファイル・ディレクトリを作成したら `react_app/INST.md` のツリーも更新します。
+4. 適切な `features/` ディレクトリに配置
+5. カスタムフックでビジネスロジック分離
+6. UIコンポーネントは `ui/` で再利用性確保
+7. 設定は `config/` で一元管理
 
 ### コード品質基準
 - **ESLint準拠**: エラー0を維持
