@@ -8,6 +8,7 @@ export const apiEndpoints = {
   detailedSummary: `${API_BASE_URL}/summarize`,
   models: `${API_BASE_URL}/models`,
   modelConfig: `${API_BASE_URL}/models/config`,
+  processPdf: `${API_BASE_URL}/process-pdf`,
 } as const;
 
 export const sortOptions = [

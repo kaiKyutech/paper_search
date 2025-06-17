@@ -10,6 +10,10 @@ export interface Paper {
   url?: string;
   citationCount?: number;
   publicationDate?: string;
+  openAccessPdf?: {
+    url: string;
+    status: string;
+  } | null;
 }
 
 export interface PaperField {

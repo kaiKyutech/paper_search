@@ -36,6 +36,8 @@ const ResultsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'analysis' | 'translation'>('analysis');
   const [showSettingsPage, setShowSettingsPage] = useState(false);
   const [currentPriorityTask, setCurrentPriorityTask] = useState<PriorityTask | null>(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [selectedPdfPaper, setSelectedPdfPaper] = useState<Paper | null>(null);
   
   // Refs
   const headerRef = useRef<HTMLElement | null>(null);
@@ -183,6 +185,16 @@ const ResultsPage: React.FC = () => {
     handleDetailedSummary(paper, false);
   };
   
+  const handleOpenPdfViewer = (paper: Paper) => {
+    setSelectedPdfPaper(paper);
+    setShowPdfViewer(true);
+  };
+  
+  const handleClosePdfViewer = () => {
+    setShowPdfViewer(false);
+    setSelectedPdfPaper(null);
+  };
+  
 
   return (
     <div className="flex">
@@ -272,6 +284,9 @@ const ResultsPage: React.FC = () => {
                           }
                           return newSet;
                         })}
+                        showPdfViewer={!!(showPdfViewer && selectedPdfPaper && getPaperId(selectedPdfPaper) === paperId)}
+                        onClosePdfViewer={handleClosePdfViewer}
+                        onOpenPdfViewer={() => handleOpenPdfViewer(result)}
                       />
                     );
                   })

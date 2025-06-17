@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { Eye, Brain, Languages, BarChart3, Lightbulb } from "lucide-react";
+import { Eye, Brain, Languages, BarChart3, Lightbulb, FileText } from "lucide-react";
 import { Paper, QuickSummary as QuickSummaryType, StreamingQuickSummary, SummaryData } from "../types";
 import { ExpandableText, LoadingSpinner } from "../ui";
 import { DetailedSummary } from "../features/summary";
+import { PdfViewer } from "../features/pdf";
 
 interface PaperCardProps {
   paper: Paper;
@@ -32,6 +33,10 @@ interface PaperCardProps {
   onCloseSummary: () => void;
   expandedSummaries: Set<string>;
   onToggleExpanded: (paperId: string) => void;
+  // PDF viewer props
+  showPdfViewer: boolean;
+  onClosePdfViewer: () => void;
+  onOpenPdfViewer: () => void;
 }
 
 export const PaperCard: React.FC<PaperCardProps> = ({
@@ -57,7 +62,10 @@ export const PaperCard: React.FC<PaperCardProps> = ({
   showSummaryPopup,
   onCloseSummary,
   expandedSummaries,
-  onToggleExpanded
+  onToggleExpanded,
+  showPdfViewer,
+  onClosePdfViewer,
+  onOpenPdfViewer
 }) => {
   const paperId = getPaperId(paper);
 
@@ -106,6 +114,17 @@ export const PaperCard: React.FC<PaperCardProps> = ({
           </a>
         </div>
         <div className="flex space-x-2">
+          {/* PDF表示ボタン */}
+          {paper.openAccessPdf?.url && paper.openAccessPdf.url.trim() && (
+            <button
+              onClick={onOpenPdfViewer}
+              className="flex items-center px-3 py-1.5 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex-shrink-0"
+              title="PDFを表示"
+            >
+              <FileText className="mr-1" size={14} />
+              PDF
+            </button>
+          )}
           <button
             onClick={onQuickSummary}
             disabled={(isQuickSummarizing && quickSummarizingPaperId === paperId) || !paper.abstract}
@@ -229,6 +248,16 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         expandedSummaries={expandedSummaries}
         onToggleExpanded={onToggleExpanded}
       />
+      
+      {/* PDFビューアー */}
+      {paper.openAccessPdf?.url && paper.openAccessPdf.url.trim() && (
+        <PdfViewer
+          pdfUrl={paper.openAccessPdf.url}
+          paperTitle={paper.title}
+          isOpen={showPdfViewer}
+          onClose={onClosePdfViewer}
+        />
+      )}
     </div>
   );
 };

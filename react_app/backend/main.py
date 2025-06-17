@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from jsonschema import validate, ValidationError
 import asyncio
+import PyPDF2
+import io
+from urllib.parse import urlparse
 
 app = FastAPI()
 
@@ -77,6 +80,19 @@ class ModelConfig(BaseModel):
 class ModelConfigRequest(BaseModel):
     function_name: str  # 'analysis', 'translation', 'quick_summary', 'detailed_summary'
     model_name: str
+
+class PdfProcessRequest(BaseModel):
+    pdf_url: str
+
+class PdfMetadata(BaseModel):
+    title: str
+    authors: List[str]
+    abstract: str
+    sections: List[str]
+
+class PdfProcessResult(BaseModel):
+    text: str
+    metadata: PdfMetadata
 
 # 設定
 import os
@@ -337,7 +353,7 @@ def search_papers_semantic(query: str, year_from: int = 2023, year_to: int | Non
     url = "http://api.semanticscholar.org/graph/v1/paper/search/"
     params = {
         "query": query,
-        "fields": "title,abstract,url,authors",
+        "fields": "title,abstract,url,authors,openAccessPdf,citationCount,publicationDate,paperId",
         "limit": limit,
         "sort": "relevance",
     }
@@ -823,6 +839,83 @@ async def summarize_paper(request: SummaryRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"要約中にエラーが発生しました: {str(e)}")
+
+def extract_text_from_pdf_url(pdf_url: str) -> str:
+    """PDFのURLからテキストを抽出する"""
+    try:
+        response = requests.get(pdf_url, timeout=30)
+        response.raise_for_status()
+        
+        # PDFバイナリデータをPyPDF2で処理
+        pdf_file = io.BytesIO(response.content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        
+        return text.strip()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF処理エラー: {str(e)}")
+
+def extract_metadata_from_text(text: str) -> PdfMetadata:
+    """抽出したテキストからメタデータを推定する（簡易版）"""
+    lines = text.split('\n')
+    
+    # 簡易的なメタデータ抽出
+    title = ""
+    authors = []
+    abstract = ""
+    sections = []
+    
+    # タイトル推定（最初の非空行）
+    for line in lines[:10]:
+        if line.strip() and len(line.strip()) > 10:
+            title = line.strip()
+            break
+    
+    # セクション見出し検出
+    for line in lines:
+        line = line.strip()
+        if line and (line.isupper() or 
+                    line.startswith(('Abstract', 'Introduction', 'Method', 'Results', 'Conclusion', 'References'))):
+            if len(line) < 50:  # 見出しは通常短い
+                sections.append(line)
+    
+    return PdfMetadata(
+        title=title,
+        authors=authors,
+        abstract=abstract,
+        sections=sections[:10]  # 最大10セクション
+    )
+
+@app.post("/process-pdf", response_model=PdfProcessResult)
+async def process_pdf(request: PdfProcessRequest):
+    """PDFからテキストとメタデータを抽出する"""
+    try:
+        # URL検証
+        parsed_url = urlparse(request.pdf_url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise HTTPException(status_code=400, detail="無効なPDF URLです")
+        
+        # テキスト抽出
+        extracted_text = extract_text_from_pdf_url(request.pdf_url)
+        
+        if not extracted_text:
+            raise HTTPException(status_code=400, detail="PDFからテキストを抽出できませんでした")
+        
+        # メタデータ抽出
+        metadata = extract_metadata_from_text(extracted_text)
+        
+        return PdfProcessResult(
+            text=extracted_text,
+            metadata=metadata
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF処理中にエラーが発生しました: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
